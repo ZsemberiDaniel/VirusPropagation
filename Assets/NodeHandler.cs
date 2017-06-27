@@ -34,6 +34,33 @@ public class NodeHandler : MonoBehaviour {
         }
     }
 
+    private NodeNameHandler nodeNameHandler;
+    public NodeNameHandler NodeNameHandler {
+        get { return nodeNameHandler; }
+        set { nodeNameHandler = value; }
+    }
+    public bool HasNodeNameHandler() { return nodeNameHandler != null; }
+
+    public bool IsRendered() { return spriteRenderer.isVisible; }
+    public bool DoesNeedNodeNameHandler() { return !HasNodeNameHandler() && IsRendered(); }
+    public bool DoesNoLongerNeedNodeNameHandler() { return HasNodeNameHandler() && !IsRendered(); }
+
+    /// <summary>
+    /// The position of the node in the world. Please use this instead of transform.position
+    /// </summary>
+    public Vector3 Position {
+        get { return transform.position; }
+        set {
+            transform.position = value;
+            // Update linerenderer
+            LineRendererUpdateToTransform();
+
+            // Update the other nodes' lines to this node
+            for (int i = 0; i < connectedTo.Count; i++)
+                connectedTo[i].UpdateLinePositionOf(this);
+        }
+    }
+
     private List<NodeHandler> connectedTo;
     public ReadOnlyCollection<NodeHandler> ConnectedTo {
         get {
@@ -42,6 +69,9 @@ public class NodeHandler : MonoBehaviour {
     }
 
     private SpriteRenderer spriteRenderer;
+    /// <summary>
+    /// Every even position is the node's position. Every odd position is the node it is connected to in the order of the list.
+    /// </summary>
     private LineRenderer lineRenderer;
     
 	void Start () {
@@ -59,6 +89,29 @@ public class NodeHandler : MonoBehaviour {
         else if (Selected) spriteRenderer.color = selectedColor;
         else spriteRenderer.color = normalColor;
 	}
+
+    /// <summary>
+    /// Updates the linerenderer position of the 'other' node.
+    /// </summary>
+    public void UpdateLinePositionOf(NodeHandler other) {
+        lineRenderer.SetPosition(GetPositionOfNodeInLineRenderer(connectedTo.IndexOf(other)), other.Position + other.Size / 2f);
+    }
+
+    /// <summary>
+    /// Returns the position of the given node (from it's index in the connectedTo list) in linerenderer
+    /// </summary>
+    private int GetPositionOfNodeInLineRenderer(int index) {
+        return index * 2 + 1;
+    }
+
+    /// <summary>
+    /// Updates the line renderer's positions because the transform.position changed.
+    /// </summary>
+    private void LineRendererUpdateToTransform() {
+        for (int i = 0; i < lineRenderer.positionCount; i += 2) { 
+            lineRenderer.SetPosition(i, transform.position + Size / 2f);
+        }
+    }
     
     /// <summary>
     /// Connect this node to the other if it has not been connected already. 
@@ -86,14 +139,21 @@ public class NodeHandler : MonoBehaviour {
     /// </summary>
     public void DisconnectFrom(NodeHandler other) {
         if (connectedTo.Remove(other)) {
-            lineRenderer.positionCount = 0;
-            lineRenderer.positionCount = connectedTo.Count * 2;
-
             // redraw the lines
-            for (int i = 0; i < connectedTo.Count; i++) {
-                lineRenderer.SetPosition(i * 2, transform.position + Size / 2f);
-                lineRenderer.SetPosition(i * 2 + i, connectedTo[i].transform.position + connectedTo[i].Size / 2f);
-            }
+            UpdateAllLineRendererPositions();
+        }
+    }
+
+    /// <summary>
+    /// Updates the position of all the lines in this node
+    /// </summary>
+    public void UpdateAllLineRendererPositions() {
+        lineRenderer.positionCount = 0;
+        lineRenderer.positionCount = connectedTo.Count * 2;
+
+        for (int i = 0; i < connectedTo.Count; i++) {
+            lineRenderer.SetPosition(i * 2, transform.position + Size / 2f);
+            lineRenderer.SetPosition(i * 2 + i, connectedTo[i].transform.position + connectedTo[i].Size / 2f);
         }
     }
 

@@ -8,7 +8,7 @@ public class CameraMovement : MonoBehaviour {
     private float mouseSensitivity = 2f;
 
     [SerializeField]
-    [Range(10f, 80f)]
+    [Range(80f, 200f)]
     private float zoomSensitivity = 20f;
 
     private float minOrthoSize = 2f;

@@ -22,6 +22,7 @@ public class GraphHandler : MonoBehaviour {
     private AddPanelHandler addPanelHandler;
 
     private NodeAttributePanelHandler nodeAttributePanelHandler;
+    private NodeNameParentHandler nodeNameParentHandler;
 
     private int selectedNode = -1;
     private int SelectedNode {
@@ -49,12 +50,17 @@ public class GraphHandler : MonoBehaviour {
         editPanelHandler = FindObjectOfType<EditPanelHandler>();
         addPanelHandler = FindObjectOfType<AddPanelHandler>();
         nodeAttributePanelHandler = FindObjectOfType<NodeAttributePanelHandler>();
+        nodeNameParentHandler = FindObjectOfType<NodeNameParentHandler>();
 
         connectStartLineRenderer = GetComponent<LineRenderer>();
 
         nodes = new List<NodeHandler>();
 	}
-	
+
+    /// <summary>
+    /// Used when a node is being moved. If it's not -1 then one is being moved.
+    /// </summary>
+    private int whichNodeIsBeingMoved = -1;
 	void Update () {
         var mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0;
@@ -63,25 +69,67 @@ public class GraphHandler : MonoBehaviour {
             connectStartLineRenderer.SetPosition(1, mouseWorldPos);
         }
 
+        for (int i = 0; i < nodes.Count; i++) {
+            if (nodes[i].DoesNeedNodeNameHandler()) {
+                nodes[i].NodeNameHandler = nodeNameParentHandler.GetNewText(nodes[i]);
+            } else if (nodes[i].DoesNoLongerNeedNodeNameHandler()) {
+                nodeNameParentHandler.QueueText(nodes[i].NodeNameHandler);
+                nodes[i].NodeNameHandler = null;
+            }
+        }
+
         #region Input
         // Not above GUI
         if (!EventSystem.current.IsPointerOverGameObject()) {
-            // Left mouse button
+            // which node the mouse is over
+            // only avliable when either mouse 0 or 1 is held down
+            int aboveIndex = -1;
+
+            // See whether the user clicked one
+            if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) {
+                for (int i = 0; i < nodes.Count; i++) {
+                    if (nodes[i].Contains(mouseWorldPos)) {
+                        aboveIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Left mouse button down
             if (Input.GetMouseButtonDown(0)) {
                 // Adding
                 if (!addEditToggle.isOn) {
-                    mouseWorldPos.z = 0;
+                    if (aboveIndex == -1) { 
+                        mouseWorldPos.z = 0;
 
-                    NodeHandler added = Instantiate(nodePrefab, mouseWorldPos, Quaternion.identity, transform).GetComponent<NodeHandler>();
-                    nodes.Add(added);
-                } else {
-                    // See whether the user clicked one
-                    for (int i = 0; i < nodes.Count; i++) {
-                        if (nodes[i].Contains(mouseWorldPos)) {
-                            SelectedNode = i;
-                            break;
-                        }
+                        NodeHandler added = Instantiate(nodePrefab, mouseWorldPos, Quaternion.identity, transform).GetComponent<NodeHandler>();
+                        nodes.Add(added);
                     }
+                // Select
+                } else {
+                    SelectedNode = aboveIndex;
+                }
+            }
+
+            // Left mouse button held
+            if (Input.GetMouseButton(0)) {
+                // Editing
+                // The second part: we started the holding down on a node or we have not released the button yet
+                if (addEditToggle.isOn && (aboveIndex != -1 || whichNodeIsBeingMoved != -1)) {
+                    if (aboveIndex != -1) whichNodeIsBeingMoved = aboveIndex;
+
+                    var nodeNewPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                    nodeNewPos.z = 0;
+
+                    nodes[whichNodeIsBeingMoved].Position = nodeNewPos - nodes[whichNodeIsBeingMoved].Size / 2f;
+                }
+            }
+
+            // Left mouse button up
+            if (Input.GetMouseButtonUp(0)) {
+                // Editing
+                if (addEditToggle.isOn) {
+                    whichNodeIsBeingMoved = -1;
                 }
             }
 
@@ -89,61 +137,54 @@ public class GraphHandler : MonoBehaviour {
             if (Input.GetMouseButtonDown(1)) {
                 // Adding
                 if (!addEditToggle.isOn) {
-                    // Remove if it is clicked
-                    for (int i = nodes.Count - 1; i >= 0; i--) {
-                        if (nodes[i].Contains(mouseWorldPos)) {
-                            // show at the top right corner of the node
-                            Vector3 showDialogAt = Camera.main.WorldToScreenPoint(nodes[i].transform.position + nodes[i].Size);
-                            // But if it won't fit in screen from top -> show it at bottom
-                            if (showDialogAt.y > Camera.main.pixelHeight - areYouSurePanel.Size.y) {
-                                showDialogAt.y = 
-                                    (Camera.main.WorldToScreenPoint(nodes[i].transform.position) - areYouSurePanel.Size).y;
-                            }
-                            // And if it won't fit to the right -> show it at the left
-                            if (showDialogAt.x > Camera.main.pixelWidth - areYouSurePanel.Size.x) {
-                                showDialogAt.x = 
-                                    (Camera.main.WorldToScreenPoint(nodes[i].transform.position) - areYouSurePanel.Size).x;
-                            }
+                    // Remove if one is clicked
+                    if (aboveIndex != -1) {
+                        // Hide immediatly so if it is shown at another node it can show the panel again
+                        areYouSurePanel.HideImmediatly();
+
+                        // show at the top right corner of the node
+                        Vector3 showDialogAt = Camera.main.WorldToScreenPoint(nodes[aboveIndex].transform.position + nodes[aboveIndex].Size);
+                        areYouSurePanel.RectTransf.pivot = new Vector2();
+                        // But if it won't fit in screen from top -> show it at bottom
+                        if (showDialogAt.y > Camera.main.pixelHeight - areYouSurePanel.Size.y) {
+                            areYouSurePanel.RectTransf.pivot = new Vector2(areYouSurePanel.RectTransf.pivot.x, 1);
+                            showDialogAt.y =
+                                (Camera.main.WorldToScreenPoint(nodes[aboveIndex].transform.position)).y;
+                        }
+                        // And if it won't fit to the right -> show it at the left
+                        if (showDialogAt.x > Camera.main.pixelWidth - areYouSurePanel.Size.x) {
+                            areYouSurePanel.RectTransf.pivot = new Vector2(1, areYouSurePanel.RectTransf.pivot.y);
+                            showDialogAt.x =
+                                (Camera.main.WorldToScreenPoint(nodes[aboveIndex].transform.position)).x;
+                        }
 
 
-                            // Ask the user whether he is sure of deleting the node
-                            areYouSurePanel.ShowAtWithAction(
-                                showDialogAt, 
-                                (isSure) => {
-                                    if (isSure) {
-                                        // First update node connections that it is connected to
-                                        var others = nodes[i].ConnectedTo;
-                                        for (int k = 0; k < others.Count; k++)
-                                            others[k].DisconnectFrom(nodes[i]);
+                        // Ask the user whether he is sure of deleting the node
+                        areYouSurePanel.ShowAtWithAction(
+                            showDialogAt,
+                            (isSure) => {
+                                if (isSure) {
+                                    // First update node connections that it is connected to
+                                    var others = nodes[aboveIndex].ConnectedTo;
+                                    for (int k = 0; k < others.Count; k++)
+                                        others[k].DisconnectFrom(nodes[aboveIndex]);
 
-                                        Destroy(nodes[i].gameObject);
-                                        nodes.RemoveAt(i);
-                                    }
+                                    Destroy(nodes[aboveIndex].gameObject);
+                                    nodes.RemoveAt(aboveIndex);
                                 }
-                            );
-                            break;
-                        }
+                            }
+                        );
                     }
-                    // Editing
+                // Editing
                 } else {
-                    int selected = -1;
-
-                    // See whether the user clicked one
-                    for (int i = 0; i < nodes.Count; i++) {
-                        if (nodes[i].Contains(mouseWorldPos)) {
-                            selected = i;
-                            break;
-                        }
-                    }
-
                     // Selected none -> deselect the start thing
-                    if (selected == -1) { 
+                    if (aboveIndex == -1) { 
                         ConnectStartNode = -1;
                     }
                     // We have a start node selected so connect them
                     else if (ConnectStartNode != -1) {
-                        nodes[ConnectStartNode].ConnectTo(nodes[selected]);
-                        nodes[selected].ConnectTo(nodes[ConnectStartNode]);
+                        nodes[ConnectStartNode].ConnectTo(nodes[aboveIndex]);
+                        nodes[aboveIndex].ConnectTo(nodes[ConnectStartNode]);
 
                         // Reflect change son the GUI
                         nodeAttributePanelHandler.UpdateNodeCurrent();
@@ -152,10 +193,14 @@ public class GraphHandler : MonoBehaviour {
                     }
                     // We have no start selected and we really did select one -> let that be the start node
                     else {
-                        ConnectStartNode = selected;
+                        ConnectStartNode = aboveIndex;
                     }
                 }
             }
+
+            // Middle mouse button
+            if (Input.GetMouseButtonDown(2))
+                areYouSurePanel.HidePanel();
 
             // add or edit toggle
             if (Input.GetKeyDown(KeyCode.Tab)) {
@@ -170,6 +215,7 @@ public class GraphHandler : MonoBehaviour {
                     SelectedNode = -1;
                 // Editing
                 } else {
+                    areYouSurePanel.HidePanel();
                     addPanelHandler.GetHideSequence().Play().OnComplete(() => {
                         editPanelHandler.GetShowSequence().Play();
                     });
