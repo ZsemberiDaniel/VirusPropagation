@@ -4,12 +4,12 @@
 public class CameraMovement : MonoBehaviour {
 
     [SerializeField]
-    [Range(0.5f, 5f)]
+    [Range(0.5f, 1.8f)]
     private float mouseSensitivity = 2f;
 
     [SerializeField]
-    [Range(80f, 200f)]
-    private float zoomSensitivity = 20f;
+    [Range(0.8f, 5f)]
+    private float zoomSensitivity = 2f;
 
     private float minOrthoSize = 2f;
     private float maxOrthoSize = 10f;
@@ -25,23 +25,25 @@ public class CameraMovement : MonoBehaviour {
 	}
 
 	void Update () {
-        if (Input.GetMouseButtonDown(2)) lastMousePos = cam.WorldToViewportPoint(Input.mousePosition); 
+        // so the last pos is not pointing to zero zero
+        if (Input.GetMouseButtonDown(2)) lastMousePos = cam.ScreenToViewportPoint(Input.mousePosition); 
 
         // Middle mouse button
 		if (Input.GetMouseButton(2)) {
-            var delta = cam.WorldToViewportPoint(Input.mousePosition) - lastMousePos;
+            var currMousePos = cam.ScreenToViewportPoint(Input.mousePosition);
+            var delta = currMousePos - lastMousePos;
             delta.z = 0;
-
+            
             // Translate by the amount we have moved the mouse since the last frame
-            transform.Translate(-delta * cam.orthographicSize * 2 * Time.deltaTime * mouseSensitivity);
+            transform.Translate(-delta * (cam.orthographicSize * 2) * mouseSensitivity);
 
-            lastMousePos = cam.WorldToViewportPoint(Input.mousePosition);
+            lastMousePos = currMousePos;
         }
         
         // Zooming
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0) {
-            float targetOrtho = Mathf.Clamp(cam.orthographicSize - scroll * Time.deltaTime * zoomSensitivity, minOrthoSize, maxOrthoSize);
+            float targetOrtho = Mathf.Clamp(cam.orthographicSize - scroll * zoomSensitivity, minOrthoSize, maxOrthoSize);
             cam.orthographicSize = targetOrtho;
         }
 	}

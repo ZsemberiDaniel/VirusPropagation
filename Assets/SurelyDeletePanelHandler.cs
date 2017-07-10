@@ -33,6 +33,33 @@ public class SurelyDeletePanelHandler : MonoBehaviour {
         set { actionToPerform = value; }
     }
 
+    void Start() {
+        rectTransform = GetComponent<RectTransform>();
+
+        yesButton = transform.Find("YesButton").GetComponent<Button>();
+        noButton = transform.Find("NoButton").GetComponent<Button>();
+
+        gameObject.SetActive(false);
+
+        // When yes is clicked
+        yesButton.onClick.AddListener(() => {
+            if (actionToPerform != null) {
+                actionToPerform(true);
+                actionToPerform = null;
+            }
+            HidePanel();
+        });
+
+        // When no is clicked
+        noButton.onClick.AddListener(() => {
+            if (actionToPerform != null) {
+                actionToPerform(false);
+                actionToPerform = null;
+            }
+            HidePanel();
+        });
+    }
+
     /// <summary>
     /// Shows the panel at the given screen pos.
     /// </summary>
@@ -82,31 +109,4 @@ public class SurelyDeletePanelHandler : MonoBehaviour {
         rectTransform.localScale = new Vector3();
         gameObject.SetActive(false);
     }
-    
-	void Start () {
-        rectTransform = GetComponent<RectTransform>();
-
-        gameObject.SetActive(false);
-
-        yesButton = transform.Find("YesButton").GetComponent<Button>();
-        noButton = transform.Find("NoButton").GetComponent<Button>();
-
-        // When yes is clicked
-        yesButton.onClick.AddListener(() => {
-            if (actionToPerform != null) { 
-                actionToPerform(true);
-                actionToPerform = null;
-            }
-            HidePanel();
-        });
-
-        // When no is clicked
-        noButton.onClick.AddListener(() => {
-            if (actionToPerform != null) {
-                actionToPerform(false);
-                actionToPerform = null;
-            }
-            HidePanel();
-        });
-	}
 }

@@ -27,20 +27,27 @@ public class NodeNameHandler : MonoBehaviour {
     /// Set every frame
     /// </summary>
     private Vector3 offsetBy = new Vector3();
-
-    float worldToScreen = 1 / (Camera.main.orthographicSize * 2) * Camera.main.pixelWidth;
+    
     void Update () {
-        offsetBy.x = (nodeToFollow.Size.x * worldToScreen - Text.bounds.size.x) / 2f;
         RectTransf.anchoredPosition = Camera.main.WorldToScreenPoint(nodeToFollow.transform.position + offsetBy);
+
+        UpdateText();
 	}
 
     public void SetNodeToFollow(NodeHandler node) {
         nodeToFollow = node;
 
-        Text.text = node.name;
-        name = node.name + "Text";
+        UpdateText();
+
+        offsetBy.x = nodeToFollow.Size.x / 2f;
+        offsetBy.y = -nodeToFollow.Size.y * 0.1f;
 
         // Set here as well so it does not simply just jump there
         RectTransf.anchoredPosition = Camera.main.WorldToScreenPoint(nodeToFollow.transform.position + offsetBy);
+    }
+
+    private void UpdateText() {
+        Text.text = nodeToFollow.name + "\n<size=60%>" + nodeToFollow.InfectedCount + "/" + nodeToFollow.PatchedCount + "/" + nodeToFollow.HostCount;
+        name = nodeToFollow.name + "Text";
     }
 }
