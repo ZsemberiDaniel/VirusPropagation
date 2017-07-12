@@ -15,13 +15,20 @@ public class InputPanel : MonoBehaviour {
     [SerializeField]
     private TMP_InputField inputField;
 
+    private GraphHandler graphHandler;
+
     private bool panelShown = false;
+    public bool IsShown {
+        get { return panelShown; }
+    }
     
 	void Start() {
         rectTransform = GetComponent<RectTransform>();
         // resize and reposition
         rectTransform.sizeDelta = new Vector2(Camera.main.pixelWidth, Camera.main.pixelHeight * 0.8f);
         rectTransform.anchoredPosition = new Vector2(0, rectTransform.sizeDelta.y / 2f);
+
+        graphHandler = FindObjectOfType<GraphHandler>();
 
         // dropdown click listener
         dropdownButtonRectTranform.GetComponent<Button>().onClick.AddListener(() => {
@@ -30,10 +37,31 @@ public class InputPanel : MonoBehaviour {
 
         // parse button click listener
         parseButton.onClick.AddListener(() => {
-            // InputParser.Parse(inputField.text);
+            ParserNode[] nodes;
+
+            try { 
+                nodes = InputParser.Parse(inputField.text, 
+                    out graphHandler.S2I, 
+                    out graphHandler.I2R, 
+                    out graphHandler.S2R, 
+                    out graphHandler.packetSize);
+            } catch (System.FormatException e) {
+                // TODO input not correct!!
+                return;
+            }
+            
+            graphHandler.SeperateNodes(graphHandler.AddNodes(nodes));
+            Close();
         });
 	}
-    
+
+    private void Update() {
+        // Close on escape key
+        if (panelShown && Input.GetKeyDown(KeyCode.Escape)) {
+            Close();
+        }
+    }
+
     /// <summary>
     /// Called when the dropdown button is clicked
     /// </summary>

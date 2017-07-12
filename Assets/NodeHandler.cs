@@ -74,6 +74,10 @@ public class NodeHandler : MonoBehaviour {
     /// The graph this node is in
     /// </summary>
     private GraphHandler graph;
+    public GraphHandler Graph {
+        get { return graph; }
+        set { this.graph = value; }
+    }
 
     /// <summary>
     /// Size of the sprite
@@ -149,7 +153,7 @@ public class NodeHandler : MonoBehaviour {
     /// </summary>
     private LineRenderer lineRenderer;
     
-	void Start() {
+	void Awake() {
         connectedTo = new List<NodeConnection>();
 
         fadeSpriteRenderer = GetComponent<SpriteRenderer>();
@@ -158,7 +162,7 @@ public class NodeHandler : MonoBehaviour {
         patchedSpriteRenderer = transform.GetChild(1).GetComponent<SpriteRenderer>();
         infectedSpriteRenderer = transform.GetChild(2).GetComponent<SpriteRenderer>();
         lineRenderer = GetComponent<LineRenderer>();
-        graph = FindObjectOfType<GraphHandler>();
+        if (graph == null) graph = FindObjectOfType<GraphHandler>();
 
         // Set the proportion spriterenderers' colors
         normalSpriteRenderer.color = normalHostColor;
@@ -169,7 +173,8 @@ public class NodeHandler : MonoBehaviour {
         selectedColor = new Color(selectedColor.r, selectedColor.g, selectedColor.b, 0.3f);
         connectStartColor = new Color(connectStartColor.r, connectStartColor.g, connectStartColor.b, 0.3f);
 
-        name = RandomWords.getRandomWords().Substring(0, 3) + RandomWords.getRandomWords().Substring(0, 3);
+        if (name == "")
+            name = RandomWords.getRandomWords().Substring(0, 3) + RandomWords.getRandomWords().Substring(0, 3);
     }
 	void Update() {
         // Update color based on the selection

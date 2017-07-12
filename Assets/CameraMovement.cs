@@ -12,7 +12,7 @@ public class CameraMovement : MonoBehaviour {
     private float zoomSensitivity = 2f;
 
     private float minOrthoSize = 2f;
-    private float maxOrthoSize = 10f;
+    private float maxOrthoSize = 20f;
 
     private Camera cam;
     /// <summary>
@@ -20,11 +20,34 @@ public class CameraMovement : MonoBehaviour {
     /// </summary>
     private Vector3 lastMousePos;
 
-	void Start () {
+    // We need this so when it is shown no movement is allowed
+    private InputPanel inputPanel;
+
+    private GraphHandler graphH;
+
+	void Start() {
         cam = GetComponent<Camera>();
+
+        graphH = FindObjectOfType<GraphHandler>();
+        cam.orthographicSize = maxOrthoSize;
+
+        inputPanel = FindObjectOfType<InputPanel>();
 	}
 
-	void Update () {
+	void Update() {
+        if (graphH.Nodes.Count > 0) { 
+            Vector3 middle = new Vector3();
+            for (int i = 0; i < graphH.Nodes.Count; i++) {
+                middle += graphH.Nodes[i].Position;
+            }
+            middle /= graphH.Nodes.Count;
+            middle.z = transform.position.z;
+
+            transform.position = middle;
+        }
+
+        if (inputPanel.IsShown) return;
+
         // so the last pos is not pointing to zero zero
         if (Input.GetMouseButtonDown(2)) lastMousePos = cam.ScreenToViewportPoint(Input.mousePosition); 
 

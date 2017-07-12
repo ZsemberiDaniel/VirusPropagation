@@ -1,11 +1,19 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using System.Collections;
 
 [RequireComponent(typeof(LineRenderer))]
 public class GraphHandler : MonoBehaviour {
+
+    // The four variables of the virus
+    public float S2I = 0f;
+    public float I2R = 0f;
+    public float S2R = 0f;
+    public int packetSize = 0;
 
     [SerializeField]
     private GameObject nodePrefab;
@@ -45,9 +53,11 @@ public class GraphHandler : MonoBehaviour {
     }
 
     private List<NodeHandler> nodes;
+    // TODO REMOVE THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    public List<NodeHandler> Nodes { get { return nodes; } }
     private List<NodeConnection> nodeConnections;
 
-    void Start () {
+    void Start() {
         editPanelHandler = FindObjectOfType<EditPanelHandler>();
         addPanelHandler = FindObjectOfType<AddPanelHandler>();
         nodeAttributePanelHandler = FindObjectOfType<NodeAttributePanelHandler>();
@@ -114,6 +124,10 @@ public class GraphHandler : MonoBehaviour {
                 } else {
                     mousePanStartedAt = mouseWorldPos;
                     SelectedNode = aboveNodeIndex;
+
+                    // A node is selected for connection -> deselect
+                    if (ConnectStartNode != -1)
+                        ConnectStartNode = -1;
                 }
             }
 
@@ -162,7 +176,7 @@ public class GraphHandler : MonoBehaviour {
                     }
                     // We have a start node selected so connect them
                     else if (ConnectStartNode != -1) {
-                        ConnectTwoNodesWithIndices(ConnectStartNode, aboveNodeIndex);
+                        ConnectTwoNodes(ConnectStartNode, aboveNodeIndex, 1000);
 
                         ConnectStartNode = -1;
                     }
@@ -220,13 +234,27 @@ public class GraphHandler : MonoBehaviour {
     }
 
     /// <summary>
-    /// Connect these node mutually in the nodes list.
+    /// Connect these node mutually in the nodes list. The indices are the ones from the nodes list
     /// </summary>
-    private void ConnectTwoNodesWithIndices(int index1, int index2) {
-        var connection = new NodeConnection(nodes[index1], nodes[index2]);
+    private void ConnectTwoNodes(int index1, int index2, int capacity) {
+        ConnectTwoNodes(nodes[index1], nodes[index2], capacity);
+    }
 
-        nodes[index1].ConnectTo(connection);
-        nodes[index2].ConnectTo(connection);
+    /// <summary>
+    /// Connect these nodes mutually
+    /// </summary>
+    private void ConnectTwoNodes(NodeHandler one, NodeHandler two, int capacity) {
+        // If there already is a connection like this then return
+        var connectedToOne = one.ConnectedToNodes;
+        for (int i = 0; i < connectedToOne.Count; i++)
+            if (connectedToOne[i].Equals(two))
+                return;
+
+        // So at this point we are sure that this is not a duplicate connection
+        var connection = new NodeConnection(one, two);
+
+        one.ConnectTo(connection);
+        two.ConnectTo(connection);
 
         nodeConnections.Add(connection);
 
@@ -292,9 +320,11 @@ public class GraphHandler : MonoBehaviour {
     /// <summary>
     /// Adds a node at the given position
     /// </summary>
-    private void AddNodeAtPos(Vector3 position) {
+    private NodeHandler AddNodeAtPos(Vector3 position) {
         NodeHandler added = Instantiate(nodePrefab, position, Quaternion.identity, transform).GetComponent<NodeHandler>();
         nodes.Add(added);
+
+        return added;
     }
 
     /// <summary>
@@ -337,6 +367,165 @@ public class GraphHandler : MonoBehaviour {
             nodeAttributePanelHandler.UpdateNodeTo(nodes[SelectedNode]);
         } else {
             nodeAttributePanelHandler.UpdateToNoneSelected();
+        }
+    }
+
+    /// <summary>
+    /// Adds the nodes based on the given ParserNodes. If a node cannot be added because it's name
+    /// then it won't be added. The same goes for a connection. If either one of the connecting neighbours cannot
+    /// be found then the connection won't be established.
+    /// </summary>
+    public NodeHandler[] AddNodes(ParserNode[] nodesToBeAdded) {
+        NodeHandler[] newNodes = new NodeHandler[nodesToBeAdded.Length];
+
+        // add all the nodes
+        for (int i = 0; i < nodesToBeAdded.Length; i++) { 
+            if (IsNameTaken(nodesToBeAdded[i].name)) continue;
+
+            // place it at a random pos
+            float areaMultiply = Mathf.Sqrt(nodesToBeAdded.Length);
+            Vector3 position = new Vector3(
+                Random.Range(0f, areaMultiply * 2f) - areaMultiply, 
+                Random.Range(0f, areaMultiply * 2f) - areaMultiply
+                );
+
+            // Add node
+            newNodes[i] = AddNodeAtPos(position);
+            newNodes[i].Graph = this;
+            newNodes[i].name = nodesToBeAdded[i].name;
+            newNodes[i].HostCount = nodesToBeAdded[i].hostCount;
+            newNodes[i].InfectedCount = nodesToBeAdded[i].infectedCount;
+        }
+
+        // Now connect the to their neighbours
+        for (int i = 0; i < newNodes.Length; i++) {
+            // Get the NodeHandlers the current NodeHandler is connected to
+            List<System.Tuple<NodeHandler, int>> nodesConnectedTo = new List<System.Tuple<NodeHandler, int>>();
+            var ct = nodesToBeAdded[i].ConnectedTo;
+
+            for (int k = 0; k < nodes.Count; k++)
+                for (int j = 0; j < ct.Count; j++)
+                    if (ct[j].connectedTo.name == nodes[k].name)
+                        nodesConnectedTo.Add(new System.Tuple<NodeHandler, int>(nodes[k], ct[j].capacity));
+
+            for (int k = 0; k < nodesConnectedTo.Count; k++)
+                ConnectTwoNodes(newNodes[i], nodesConnectedTo[k].Item1, nodesConnectedTo[k].Item2);
+        }
+
+        return newNodes;
+    } 
+
+    /// <summary>
+    /// Seperates the given nodes. If the given nodes are null all the nodes will be seperated
+    /// </summary>
+    public void SeperateNodes(NodeHandler[] nodes = null, float repulsion = 0.05f, float stiffness = 0.5f, float springLength = 3f) {
+        NodePhysicsWrapper[] _nodes;
+        // if nodes is null then use all nodes
+        if (nodes == null) _nodes = this.nodes.Select(node => new NodePhysicsWrapper(node)).ToArray();
+        else _nodes = nodes.Select(node => new NodePhysicsWrapper(node)).ToArray();
+
+        StartCoroutine(Stuff(_nodes, repulsion, stiffness, springLength));
+    }
+
+    private IEnumerator Stuff(NodePhysicsWrapper[] _nodes, float repulsion, float stiffness, float springLength) {
+        bool hasEnoughEnergy = true;
+        int iterationCount = 0;
+        
+        while (hasEnoughEnergy && iterationCount <= 5000) {
+            iterationCount++;
+
+            // *** Apply coulomb's law ***
+            // *** Attract to center ***
+
+            // first get the center
+            Vector3 centerPos = new Vector3();
+            for (int i = 0; i < _nodes.Length; i++) centerPos += _nodes[i].node.Position;
+            centerPos /= _nodes.Length;
+
+            for (int i = 0; i < _nodes.Length; i++) {
+                for (int k = 0; k < _nodes.Length; k++) {
+                    if (i != k) {
+                        Vector3 d = _nodes[i].node.Position - _nodes[k].node.Position;
+                        float distance = d.magnitude + 0.2f; // avoid massive forces at small distances (and division by zero)
+                        Vector3 direction = d.normalized;
+
+                        // apply coulomb force
+                        _nodes[i].ApplyForce(direction * repulsion / (distance * distance * 0.5f));
+                        _nodes[k].ApplyForce(direction * repulsion / (distance * distance * -0.5f));
+                    }
+                }
+
+                // now we can attract to center
+                var directionCenter = centerPos - _nodes[i].node.Position;
+                _nodes[i].ApplyForce(directionCenter * (repulsion / 2f)); // make some times less influential than the coulomb force
+            }
+
+            // *** Apply Hookes's law ***
+            for (int i = 0; i < _nodes.Length; i++) {
+                var connectedToNames = _nodes[i].node.ConnectedToNodes.Select(node => node.name);
+
+                // Go through only the ones that are connected to this node
+                for (int k = 0; k < _nodes.Length; k++) {
+                    if (connectedToNames.Contains(_nodes[k].node.name)) { 
+                        Vector3 d = _nodes[i].node.Position - _nodes[k].node.Position;
+                        Vector3 direction = d.normalized;
+                        float displacement = springLength - d.magnitude;
+
+                        _nodes[i].ApplyForce(direction * stiffness * displacement * 0.5f);
+                        _nodes[k].ApplyForce(direction * stiffness * displacement * -0.5f);
+                    }
+                }
+            }
+
+            // *** Update velocity and position ***
+            // *** Calculate total energy ****
+            float totalEnergy = 0f;
+            for (int i = 0; i < _nodes.Length; i++) {
+                // vel
+                _nodes[i].velocity += _nodes[i].acceleration;
+                _nodes[i].acceleration = new Vector2();
+
+                // limit to max speed
+                if (_nodes[i].velocity.magnitude > _nodes[i].maxSpeed)
+                    _nodes[i].velocity = _nodes[i].velocity.normalized * _nodes[i].maxSpeed;
+
+                // pos
+                _nodes[i].node.Position += _nodes[i].velocity;
+
+                // energy
+                float speed = _nodes[i].velocity.magnitude;
+                totalEnergy += speed * speed * _nodes[i].mass * 0.5f;
+            }
+
+            // If total energy goes below threshold stop it
+            if (totalEnergy < 3f)
+                hasEnoughEnergy = false;
+            Debug.Log(totalEnergy);
+
+            yield return new WaitForSeconds(0.05f);
+        }
+    }
+
+    /// <summary>
+    /// Used for the SeperateNodes function
+    /// </summary>
+    private struct NodePhysicsWrapper {
+        public NodeHandler node;
+        public float mass;
+        public Vector3 velocity;
+        public Vector3 acceleration;
+        public float maxSpeed;
+
+        public NodePhysicsWrapper(NodeHandler node) {
+            this.node = node;
+            mass = 1f;
+            maxSpeed = 2f;
+            velocity = new Vector2();
+            acceleration = new Vector2();
+        }
+        
+        public void ApplyForce(Vector3 force) {
+            acceleration += force / mass;
         }
     }
 }

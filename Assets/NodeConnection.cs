@@ -3,6 +3,12 @@
     private NodeHandler nodeOne;
     private NodeHandler nodeTwo;
 
+    private int capacity;
+    public int Capacity {
+        get { return capacity; }
+        set { capacity = value; }
+    }
+
     public NodeConnection(NodeHandler one, NodeHandler two) {
         this.nodeOne = one;
         this.nodeTwo = two;
@@ -16,6 +22,10 @@
 
     public bool Contains(NodeHandler node) {
         return nodeOne.Equals(node) || nodeTwo.Equals(node);
+    }
+
+    public bool Equals(NodeHandler one, NodeHandler two) {
+        return Contains(one) && Contains(two);
     }
 	
 }
