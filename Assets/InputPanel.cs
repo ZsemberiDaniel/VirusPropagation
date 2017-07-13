@@ -51,6 +51,7 @@ public class InputPanel : MonoBehaviour {
             }
             
             graphHandler.SeperateNodes(graphHandler.AddNodes(nodes));
+            inputField.text = "";
             Close();
         });
 	}

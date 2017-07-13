@@ -53,8 +53,6 @@ public class GraphHandler : MonoBehaviour {
     }
 
     private List<NodeHandler> nodes;
-    // TODO REMOVE THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    public List<NodeHandler> Nodes { get { return nodes; } }
     private List<NodeConnection> nodeConnections;
 
     void Start() {
@@ -418,29 +416,32 @@ public class GraphHandler : MonoBehaviour {
     /// <summary>
     /// Seperates the given nodes. If the given nodes are null all the nodes will be seperated
     /// </summary>
-    public void SeperateNodes(NodeHandler[] nodes = null, float repulsion = 0.05f, float stiffness = 0.5f, float springLength = 3f) {
+    public void SeperateNodes(NodeHandler[] nodes = null, float repulsion = 0.8f, float stiffness = 0.9f, float springLength = 7f) {
         NodePhysicsWrapper[] _nodes;
         // if nodes is null then use all nodes
         if (nodes == null) _nodes = this.nodes.Select(node => new NodePhysicsWrapper(node)).ToArray();
         else _nodes = nodes.Select(node => new NodePhysicsWrapper(node)).ToArray();
 
-        StartCoroutine(Stuff(_nodes, repulsion, stiffness, springLength));
+        StartCoroutine(SeperateNodeCoroutine(_nodes, repulsion, stiffness, springLength));
     }
 
-    private IEnumerator Stuff(NodePhysicsWrapper[] _nodes, float repulsion, float stiffness, float springLength) {
+    private IEnumerator SeperateNodeCoroutine(NodePhysicsWrapper[] _nodes, float repulsion, float stiffness, float springLength) {
         bool hasEnoughEnergy = true;
         int iterationCount = 0;
-        
-        while (hasEnoughEnergy && iterationCount <= 5000) {
+        int maxIteration = 50;
+
+        // first get the center
+        Vector3 centerPos = new Vector3();
+        for (int i = 0; i < _nodes.Length; i++) centerPos += _nodes[i].node.Position;
+        centerPos /= _nodes.Length;
+
+        float minimum = float.MaxValue;
+
+        while (hasEnoughEnergy && iterationCount <= maxIteration) {
             iterationCount++;
 
             // *** Apply coulomb's law ***
             // *** Attract to center ***
-
-            // first get the center
-            Vector3 centerPos = new Vector3();
-            for (int i = 0; i < _nodes.Length; i++) centerPos += _nodes[i].node.Position;
-            centerPos /= _nodes.Length;
 
             for (int i = 0; i < _nodes.Length; i++) {
                 for (int k = 0; k < _nodes.Length; k++) {
@@ -457,7 +458,7 @@ public class GraphHandler : MonoBehaviour {
 
                 // now we can attract to center
                 var directionCenter = centerPos - _nodes[i].node.Position;
-                _nodes[i].ApplyForce(directionCenter * (repulsion / 2f)); // make some times less influential than the coulomb force
+                _nodes[i].ApplyForce(directionCenter * (repulsion / 50f)); // make some times less influential than the coulomb force
             }
 
             // *** Apply Hookes's law ***
@@ -498,12 +499,22 @@ public class GraphHandler : MonoBehaviour {
             }
 
             // If total energy goes below threshold stop it
-            if (totalEnergy < 3f)
+            if (totalEnergy < 4f)
                 hasEnoughEnergy = false;
-            Debug.Log(totalEnergy);
 
-            yield return new WaitForSeconds(0.05f);
+            // so we sample the energy in the first 80% then if we find a smaller one than the smallest * 1.2f then stop there
+            // TODO try average
+            if (iterationCount > maxIteration * 0.8f) {
+                if (totalEnergy < minimum * 1.2f)
+                    hasEnoughEnergy = false;
+            } else if (totalEnergy < minimum) {
+                minimum = totalEnergy;
+            }
+
+            yield return null;
         }
+
+        Debug.Log(iterationCount + " " + minimum);
     }
 
     /// <summary>

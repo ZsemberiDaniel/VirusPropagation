@@ -23,29 +23,14 @@ public class CameraMovement : MonoBehaviour {
     // We need this so when it is shown no movement is allowed
     private InputPanel inputPanel;
 
-    private GraphHandler graphH;
-
 	void Start() {
         cam = GetComponent<Camera>();
-
-        graphH = FindObjectOfType<GraphHandler>();
         cam.orthographicSize = maxOrthoSize;
 
         inputPanel = FindObjectOfType<InputPanel>();
 	}
 
 	void Update() {
-        if (graphH.Nodes.Count > 0) { 
-            Vector3 middle = new Vector3();
-            for (int i = 0; i < graphH.Nodes.Count; i++) {
-                middle += graphH.Nodes[i].Position;
-            }
-            middle /= graphH.Nodes.Count;
-            middle.z = transform.position.z;
-
-            transform.position = middle;
-        }
-
         if (inputPanel.IsShown) return;
 
         // so the last pos is not pointing to zero zero
