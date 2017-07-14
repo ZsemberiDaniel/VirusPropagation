@@ -100,12 +100,20 @@ public class GraphHandler : MonoBehaviour {
             // which node the mouse is over
             // only avliable when either mouse 0 or 1 is held down
             int aboveNodeIndex = -1;
+            int aboveLineIndex = -1;
 
-            // See whether the user clicked one
+            // See whether the user clicked a node or a line
             if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) {
                 for (int i = 0; i < nodes.Count; i++) {
                     if (nodes[i].Contains(mouseWorldPos)) {
                         aboveNodeIndex = i;
+                        break;
+                    }
+                }
+
+                for (int i = 0; i < nodeConnections.Count; i++) {
+                    if (nodeConnections[i].Contains(mouseWorldPos)) {
+                        aboveLineIndex = i;
                         break;
                     }
                 }
@@ -162,15 +170,22 @@ public class GraphHandler : MonoBehaviour {
             if (Input.GetMouseButtonDown(1)) {
                 // Adding
                 if (!addEditToggle.isOn) {
-                    // Remove if one is clicked
+                    // Remove if a node is clicked
                     if (aboveNodeIndex != -1) {
                         RemoveNodeWithIndexWithSurePanel(aboveNodeIndex);
+                    // Remove if a connection is clicked
+                    } else if (aboveLineIndex != -1) {
+                        RemoveConnectionWithIndexWithSurePanel(aboveLineIndex);
                     }
                 // Editing
                 } else {
                     // Selected none -> deselect the start thing
                     if (aboveNodeIndex == -1) { 
                         ConnectStartNode = -1;
+
+                        // Remove if a connection is clicked
+                        if (aboveLineIndex != -1)
+                            RemoveConnectionWithIndexWithSurePanel(aboveLineIndex);
                     }
                     // We have a start node selected so connect them
                     else if (ConnectStartNode != -1) {
@@ -261,32 +276,15 @@ public class GraphHandler : MonoBehaviour {
     }
 
     /// <summary>
-    /// Removed the node in the indexth place of the nodes array WITH the are you sure panel.
+    /// Removes the node in the indexth place of the nodes array WITH the are you sure panel.
     /// </summary>
     private void RemoveNodeWithIndexWithSurePanel(int index) {
         // Hide immediatly so if it is shown at another node it can show the panel again
         areYouSurePanel.HideImmediatly();
 
-        // show at the top right corner of the node
-        Vector3 showDialogAt = Camera.main.WorldToScreenPoint(nodes[index].transform.position + nodes[index].Size);
-        areYouSurePanel.RectTransf.pivot = new Vector2();
-        // But if it won't fit in screen from top -> show it at bottom
-        if (showDialogAt.y > Camera.main.pixelHeight - areYouSurePanel.Size.y) {
-            areYouSurePanel.RectTransf.pivot = new Vector2(areYouSurePanel.RectTransf.pivot.x, 1);
-            showDialogAt.y =
-                (Camera.main.WorldToScreenPoint(nodes[index].transform.position)).y;
-        }
-        // And if it won't fit to the right -> show it at the left
-        if (showDialogAt.x > Camera.main.pixelWidth - areYouSurePanel.Size.x) {
-            areYouSurePanel.RectTransf.pivot = new Vector2(1, areYouSurePanel.RectTransf.pivot.y);
-            showDialogAt.x =
-                (Camera.main.WorldToScreenPoint(nodes[index].transform.position)).x;
-        }
-
-
         // Ask the user whether he is sure of deleting the node
         areYouSurePanel.ShowAtWithAction(
-            showDialogAt,
+            Input.mousePosition,
             (isSure) => {
                 if (isSure) {
                     RemoveNodeWithIndex(index);
@@ -296,7 +294,7 @@ public class GraphHandler : MonoBehaviour {
     }
 
     /// <summary>
-    /// Removed the node in the indexth place of the nodes array without the are you sure panel.
+    /// Removes the node in the indexth place of the nodes array without the are you sure panel.
     /// </summary>
     private void RemoveNodeWithIndex(int index) {
         // First update node connections that it is connected to
@@ -313,6 +311,34 @@ public class GraphHandler : MonoBehaviour {
 
         Destroy(nodes[index].gameObject);
         nodes.RemoveAt(index);
+    }
+
+    /// <summary>
+    /// Removes the node connection with the given index while asking the user whether he is sure about the removal
+    /// </summary>
+    private void RemoveConnectionWithIndexWithSurePanel(int index) {
+        // Hide immediatly so if it is shown at another connection it can show the panel again
+        areYouSurePanel.HideImmediatly();
+
+        // Ask the user whether he is sure of deleting the connection
+        areYouSurePanel.ShowAtWithAction(
+            Input.mousePosition,
+            (isSure) => {
+                if (isSure) {
+                    RemoveConnectionWithIndex(index);
+                }
+            }
+        );
+    }
+
+    /// <summary>
+    /// Removes the node connection with the given index.
+    /// </summary>
+    private void RemoveConnectionWithIndex(int index) {
+        nodeConnections[index].NodeOne.Disconnect(nodeConnections[index]);
+        nodeConnections[index].NodeTwo.Disconnect(nodeConnections[index]);
+
+        nodeConnections.RemoveAt(index);
     }
 
     /// <summary>
@@ -424,7 +450,6 @@ public class GraphHandler : MonoBehaviour {
 
         StartCoroutine(SeperateNodeCoroutine(_nodes, repulsion, stiffness, springLength));
     }
-
     private IEnumerator SeperateNodeCoroutine(NodePhysicsWrapper[] _nodes, float repulsion, float stiffness, float springLength) {
         bool hasEnoughEnergy = true;
         int iterationCount = 0;

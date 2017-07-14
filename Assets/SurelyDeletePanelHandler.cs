@@ -67,6 +67,18 @@ public class SurelyDeletePanelHandler : MonoBehaviour {
         if (shown) return;
 
         shown = true;
+
+        // Set pivot correctly
+        RectTransf.pivot = new Vector2();
+        // But if it won't fit in screen from top -> show it at bottom
+        if (pos.y > Camera.main.pixelHeight - Size.y) {
+            RectTransf.pivot = new Vector2(RectTransf.pivot.x, 1);
+        }
+        // And if it won't fit to the right -> show it at the left
+        if (pos.x > Camera.main.pixelWidth - Size.x) {
+            RectTransf.pivot = new Vector2(1, RectTransf.pivot.y);
+        }
+
         rectTransform.anchoredPosition = pos;
 
         rectTransform.localScale = new Vector3();

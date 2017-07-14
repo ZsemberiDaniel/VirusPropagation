@@ -266,7 +266,7 @@ public class NodeHandler : MonoBehaviour {
     }
 
     /// <summary>
-    /// Disconnect the given node
+    /// Disconnect the given node. This first needs to find the connection in a list so if you can use the Disconnect() function.
     /// </summary>
     public void DisconnectFromNode(NodeHandler other) {
         int index = GetPositionOfNodeInList(other);

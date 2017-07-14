@@ -25,7 +25,6 @@ public class CameraMovement : MonoBehaviour {
 
 	void Start() {
         cam = GetComponent<Camera>();
-        cam.orthographicSize = maxOrthoSize;
 
         inputPanel = FindObjectOfType<InputPanel>();
 	}
