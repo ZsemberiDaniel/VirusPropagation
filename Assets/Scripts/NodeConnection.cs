@@ -79,20 +79,26 @@ public class NodeConnection : MonoBehaviour {
         return nodeOne.Equals(node) || nodeTwo.Equals(node);
     }
     public bool Contains(Vector3 mouseWorldPos, float maxDistance) {
-        Vector3 pos1 = nodeOne.transform.position;
-        Vector3 pos2 = nodeTwo.transform.position;
+        Vector3 pos1 = nodeOne.PositionMiddle;
+        Vector3 pos2 = nodeTwo.PositionMiddle;
 
-        float pointLineDist = Mathf.Abs((pos2.y - pos1.y) * mouseWorldPos.x - (pos2.x - pos1.x) * mouseWorldPos.y + pos2.x * pos1.y - pos2.y * pos1.x)
+        float pointLineDist = Mathf.Abs((pos2.y - pos1.y) * (pos1.x - mouseWorldPos.x) - (pos2.x - pos1.x) * (pos1.y - mouseWorldPos.y))
             / Mathf.Sqrt((pos2.y - pos1.y) * (pos2.y - pos1.y) + (pos2.x - pos1.x) * (pos2.x - pos1.x));
         
         if (pointLineDist <= maxDistance) {
-            Vector3 connectionVector = pos2 - pos1;
-            Vector3 pointOnLine = pos1 + Vector3.Dot(mouseWorldPos - pos1, connectionVector) 
-                / Vector3.Dot(connectionVector, connectionVector) * connectionVector;
+            Vector3 connectionVector = (pos2 - pos1).normalized;
+            Vector3 normalConnectionVector = new Vector3(-connectionVector.y, connectionVector.x, 0);
+
+            Vector3 pointOnLine1 = mouseWorldPos + normalConnectionVector * pointLineDist;
+            Vector3 pointOnLine2 = mouseWorldPos - normalConnectionVector * pointLineDist;
+            float connectionDist = Vector3.Distance(pos1, pos2);
 
             return Mathf.Approximately(
-                Vector3.Distance(pos1, pos2), 
-                Vector3.Distance(pos1, pointOnLine) + Vector3.Distance(pos2, pointOnLine)
+                    connectionDist, 
+                    Vector3.Distance(pos1, pointOnLine1) + Vector3.Distance(pos2, pointOnLine1)
+                ) || Mathf.Approximately(
+                    connectionDist,
+                    Vector3.Distance(pos1, pointOnLine2) + Vector3.Distance(pos2, pointOnLine2)
                 );
         } else {
             return false;

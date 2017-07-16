@@ -170,6 +170,7 @@ public class GraphHandler : MonoBehaviour {
                     if (aboveNodeIndex != -1 && whichNodeIsBeingMoved == -1) { 
                         whichNodeIsBeingMoved = aboveNodeIndex;
                         SelectedNode = whichNodeIsBeingMoved;
+                        SelectedConnection = -1;
                     }
 
                     // We are moving a node
@@ -252,20 +253,38 @@ public class GraphHandler : MonoBehaviour {
     /// Toggle the add/edit mode
     /// </summary>
     private void ToggleAddEditMode() {
-        addEditToggle.isOn = !addEditToggle.isOn;
-
         // Adding
-        if (!addEditToggle.isOn) {
-            editPanel.HidePanel();
-
-            SelectedNode = -1;
-            SelectedConnection = -1;
-            // Editing
+        if (addEditToggle.isOn) {
+            EnterAddMode();
+        // Editing
         } else {
-            areYouSurePanel.HidePanel();
-
-            editPanel.ShowPanel();
+            EnterEditMode();
         }
+    }
+
+    /// <summary>
+    /// Enters the add mode. If already in add mode it does nothing
+    /// </summary>
+    private void EnterAddMode() {
+        if (!addEditToggle.isOn) return;
+
+        addEditToggle.isOn = false;
+
+        editPanel.HidePanel();
+        SelectedNode = -1;
+        SelectedConnection = -1;
+    }
+
+    /// <summary>
+    /// Enters the edit mode. If already in edit mode it does nothing
+    /// </summary>
+    private void EnterEditMode() {
+        if (addEditToggle.isOn) return;
+
+        addEditToggle.isOn = true;
+
+        areYouSurePanel.HidePanel();
+        editPanel.ShowPanel();
     }
 
     /// <summary>
@@ -278,7 +297,7 @@ public class GraphHandler : MonoBehaviour {
     /// <summary>
     /// Connect these nodes mutually
     /// </summary>
-    private void ConnectTwoNodes(NodeHandler one, NodeHandler two, int capacity) {
+    private void ConnectTwoNodes(NodeHandler one, NodeHandler two, int capacity = 1000) {
         if (one.Equals(two)) return;
 
         // If there already is a connection like this then return
@@ -290,6 +309,7 @@ public class GraphHandler : MonoBehaviour {
         // So at this point we are sure that this is not a duplicate connection
         var connection = Instantiate(connectionPrefab, connectionParent.transform).GetComponent<NodeConnection>();
         connection.SetNodes(one, two);
+        connection.Capacity = capacity;
 
         one.ConnectTo(two);
         two.ConnectTo(one);
@@ -622,6 +642,7 @@ public class GraphHandler : MonoBehaviour {
         }
 
         Debug.Log(iterationCount + " " + minimum);
+        EnterEditMode();
     }
 
     /// <summary>

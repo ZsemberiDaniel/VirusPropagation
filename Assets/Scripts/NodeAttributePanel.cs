@@ -105,14 +105,14 @@ public class NodeAttributePanel : MonoBehaviour {
     public void UpdateToNoneSelected() {
         currentNode = null;
 
-        nameTextInput.text = "None";
+        nameTextInput.text = "";
         connectedToText.text = "";
-        hostCountInput.text = "0";
-        infectedCountInput.text = "0";
+        hostCountInput.text = "";
+        infectedCountInput.text = "";
 
-        nameTextInput.readOnly = true;
-        hostCountInput.readOnly = true;
-        infectedCountInput.readOnly = true;
+        nameTextInput.interactable = false;
+        hostCountInput.interactable = false;
+        infectedCountInput.interactable = false;
 
         deleteButton.interactable = false;
     }
@@ -136,15 +136,15 @@ public class NodeAttributePanel : MonoBehaviour {
 
         // Name
         nameTextInput.text = currentNode.name;
-        nameTextInput.readOnly = false;
+        nameTextInput.interactable = true;
 
         // Host count
         hostCountInput.text = currentNode.HostCount.ToString();
-        hostCountInput.readOnly = false;
+        hostCountInput.interactable = true;
 
         // Infected count
         infectedCountInput.text = currentNode.InfectedCount.ToString();
-        infectedCountInput.readOnly = false;
+        infectedCountInput.interactable = true;
 
         // Connected to
         connectedToText.text = "";

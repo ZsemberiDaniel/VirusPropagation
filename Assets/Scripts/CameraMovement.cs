@@ -11,7 +11,7 @@ public class CameraMovement : MonoBehaviour {
     [Range(0.8f, 5f)]
     private float zoomSensitivity = 2f;
 
-    private float minOrthoSize = 15f;
+    private float minOrthoSize = 10f;
     private float maxOrthoSize = 30f;
 
     private Camera cam;
