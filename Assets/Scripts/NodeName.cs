@@ -5,8 +5,8 @@ public class NodeName : MonoBehaviour {
 
     private NodeHandler nodeToFollow;
 
-    private TextMeshProUGUI text;
-    private TextMeshProUGUI Text {
+    private TMP_Text text;
+    private TMP_Text Text {
         get {
             if (text == null) text = GetComponent<TextMeshProUGUI>();
 
@@ -22,13 +22,20 @@ public class NodeName : MonoBehaviour {
             return rectTransform;
         }
     }
+    public Vector3 Size {
+        get { return rectTransform.sizeDelta; }
+        set {
+            rectTransform.sizeDelta = value;
+            Text.RecalculateClipping();
+        }
+    }
 
     /// <summary>
     /// Set every frame
     /// </summary>
     private Vector3 offsetBy = new Vector3();
     
-    void Update () {
+    void Update() {
         RectTransf.anchoredPosition = Camera.main.WorldToScreenPoint(nodeToFollow.transform.position + offsetBy);
 
         UpdateText();

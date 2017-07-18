@@ -19,6 +19,7 @@ public class NodeNameParent : MonoBehaviour {
         else text = Instantiate(nodeNamePrefab, transform).GetComponent<NodeName>();
 
         text.SetNodeToFollow(nodeToFollow);
+        text.Size = new Vector2(Camera.main.pixelWidth * 0.1f, Camera.main.pixelWidth * 0.03f);
 
         text.gameObject.SetActive(true);
         return text;
@@ -28,5 +29,4 @@ public class NodeNameParent : MonoBehaviour {
         text.gameObject.SetActive(false);
         texts.Enqueue(text);
     }
-	
 }

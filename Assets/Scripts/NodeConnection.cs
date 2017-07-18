@@ -23,12 +23,26 @@ public class NodeConnection : MonoBehaviour {
         set { capacity = value; }
     }
 
+    private int usedCapacity = 0;
+    public int UsedCapacity {
+        get { return usedCapacity; }
+    }
+
+    private ConnectionData connectionData;
+    public ConnectionData ConnectionData {
+        set { connectionData = value; }
+        get { return connectionData; }
+    }
+
     private LineRenderer lineRenderer;
 
     private void Start() {
         lineRenderer = GetComponent<LineRenderer>();
         lineRenderer.positionCount = 2;
         UpdateLineRenderer();
+
+        lineRenderer.startColor = normalColor;
+        lineRenderer.endColor = normalColor;
     }
     private void Update() {
         UpdateLineRenderer();
@@ -40,13 +54,15 @@ public class NodeConnection : MonoBehaviour {
 
         name = one.name + " -> " + two.name;
     }
-
     public NodeHandler OtherNode(NodeHandler currNode) {
         if (currNode.Equals(nodeOne)) return nodeTwo;
         else if (currNode.Equals(nodeTwo)) return nodeOne;
         return null;
     }
 
+    /// <summary>
+    /// Updates linerenderer positions to the nodes' positions
+    /// </summary>
     private void UpdateLineRenderer() {
         lineRenderer.SetPosition(0, nodeOne.PositionMiddle);
         lineRenderer.SetPosition(1, nodeTwo.PositionMiddle);
@@ -73,6 +89,16 @@ public class NodeConnection : MonoBehaviour {
     public void DisconnectBoth() {
         nodeOne.Disconnect(nodeTwo);
         nodeTwo.Disconnect(nodeOne);
+    }
+
+    public bool IsRendered() {
+        return nodeOne.IsRendered() || nodeTwo.IsRendered();
+    }
+    public bool DoesNeedConnectionDataHandler() {
+        return IsRendered() && connectionData == null;
+    }
+    public bool DoesNoLongerNeedConnectionDataHandler() {
+        return !IsRendered() && connectionData != null;
     }
 
     public bool Contains(NodeHandler node) {

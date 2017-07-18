@@ -34,6 +34,7 @@ public class GraphHandler : MonoBehaviour {
 
     private EditPanel editPanel;
     private NodeNameParent nodeNameParent;
+    private ConnectionDataParent connectionDataParent;
 
     private int selectedNode = -1;
     private int SelectedNode {
@@ -70,6 +71,7 @@ public class GraphHandler : MonoBehaviour {
     void Start() {
         editPanel = FindObjectOfType<EditPanel>();
         nodeNameParent = FindObjectOfType<NodeNameParent>();
+        connectionDataParent = FindObjectOfType<ConnectionDataParent>();
 
         nodeParent = new GameObject("NodeParent");
         nodeParent.transform.parent = transform;
@@ -106,6 +108,16 @@ public class GraphHandler : MonoBehaviour {
             } else if (nodes[i].DoesNoLongerNeedNodeNameHandler()) {
                 nodeNameParent.QueueText(nodes[i].NodeNameHandler);
                 nodes[i].NodeNameHandler = null;
+            }
+        }
+
+        // Connection data text
+        for (int i = 0; i < nodeConnections.Count; i++) {
+            if (nodeConnections[i].DoesNeedConnectionDataHandler()) {
+                nodeConnections[i].ConnectionData = connectionDataParent.GetNewData(nodeConnections[i]);
+            } else if (nodeConnections[i].DoesNoLongerNeedConnectionDataHandler()) {
+                connectionDataParent.QueueData(nodeConnections[i].ConnectionData);
+                nodeConnections[i].ConnectionData = null;
             }
         }
 
