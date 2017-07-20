@@ -25,7 +25,7 @@ public class InputPanel : MonoBehaviour {
 	void Start() {
         rectTransform = GetComponent<RectTransform>();
         // resize and reposition
-        rectTransform.sizeDelta = new Vector2(Camera.main.pixelWidth, Camera.main.pixelHeight * 0.8f);
+        rectTransform.sizeDelta = new Vector2(rectTransform.sizeDelta.x, Camera.main.pixelHeight * 0.8f);
         rectTransform.anchoredPosition = new Vector2(0, rectTransform.sizeDelta.y / 2f);
 
         graphHandler = FindObjectOfType<GraphHandler>();

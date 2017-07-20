@@ -23,8 +23,8 @@ public class EditPanel : MonoBehaviour {
 
     private void Start() {
         // set the panels' sizes
-        nodeAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, Camera.main.pixelHeight);
-        connectionAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, Camera.main.pixelHeight);
+        nodeAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, nodeAttributePanel.sizeDelta.y);
+        connectionAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, connectionAttributePanel.sizeDelta.y);
 
         nodeAttributePanelHandler = nodeAttributePanel.GetComponent<NodeAttributePanel>();
         connectionAttributePanelHandler = connectionAttributePanel.GetComponent<ConnectionAttributePanel>();
@@ -40,6 +40,7 @@ public class EditPanel : MonoBehaviour {
         shown = true;
 
         RectTransform curr = GetRectTransformFor(attributePanelType);
+        AttributePanel panel = GetAttrPanelFor(attributePanelType);
 
         DOTween.Sequence()
             .OnStart(() => {
@@ -79,6 +80,13 @@ public class EditPanel : MonoBehaviour {
         switch (attributePanelType) {
             case AttributePanelType.node: return nodeAttributePanel;
             case AttributePanelType.connection: return connectionAttributePanel;
+            default: return null;
+        }
+    }
+    private AttributePanel GetAttrPanelFor(AttributePanelType type) {
+        switch (type) {
+            case AttributePanelType.connection: return connectionAttributePanelHandler;
+            case AttributePanelType.node: return nodeAttributePanelHandler;
             default: return null;
         }
     }

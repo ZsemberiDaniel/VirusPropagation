@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using UnityEngine.EventSystems;
 
-public class ConnectionAttributePanel : MonoBehaviour {
+public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
 
     [SerializeField]
     private TMP_Text fromText;
@@ -70,5 +72,12 @@ public class ConnectionAttributePanel : MonoBehaviour {
 
         fromText.text = connection.NodeOne.name;
         toText.text = connection.NodeTwo.name;
+
+        FocusFirstUIElement();
+    }
+
+    public void FocusFirstUIElement() {
+        capacityInput.ActivateInputField();
+        capacityInput.Select();
     }
 }

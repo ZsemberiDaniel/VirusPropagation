@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using UnityEngine.EventSystems;
 
-public class NodeAttributePanel : MonoBehaviour {
+public class NodeAttributePanel : MonoBehaviour, AttributePanel {
     
     /// <summary>
     /// The name of the current node is written to this
@@ -151,6 +153,12 @@ public class NodeAttributePanel : MonoBehaviour {
         var connectedTo = currentNode.ConnectedToNodes;
         for (int i = 0; i < connectedTo.Count; i++)
             connectedToText.text += connectedTo[i].name + "\n";
+
+        FocusFirstUIElement();
     }
 
+    public void FocusFirstUIElement() {
+        EventSystem.current.SetSelectedGameObject(nameTextInput.gameObject);
+        nameTextInput.ActivateInputField();
+    }
 }

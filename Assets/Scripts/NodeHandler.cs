@@ -95,7 +95,6 @@ public class NodeHandler : MonoBehaviour {
         get { return nodeNameHandler; }
         set { nodeNameHandler = value; }
     }
-    public bool HasNodeNameHandler() { return nodeNameHandler != null; }
 
     private string nodeName = "";
     public new string name {
@@ -110,6 +109,7 @@ public class NodeHandler : MonoBehaviour {
     }
 
     public bool IsRendered() { return fadeSpriteRenderer.isVisible; }
+    public bool HasNodeNameHandler() { return nodeNameHandler != null; }
     public bool DoesNeedNodeNameHandler() { return !HasNodeNameHandler() && IsRendered(); }
     public bool DoesNoLongerNeedNodeNameHandler() { return HasNodeNameHandler() && !IsRendered(); }
 

@@ -241,11 +241,11 @@ public class GraphHandler : MonoBehaviour {
             // Middle mouse button
             if (Input.GetMouseButtonDown(2))
                 areYouSurePanel.HidePanel();
+        }
 
-            // add or edit toggle
-            if (Input.GetKeyDown(KeyCode.Tab)) {
-                ToggleAddEditMode();
-            }
+        // add or edit toggle
+        if (Input.GetKeyDown(KeyCode.Tab)) {
+            ToggleAddEditMode();
         }
         #endregion
     }
@@ -430,6 +430,7 @@ public class GraphHandler : MonoBehaviour {
     /// </summary>
     private void RemoveConnectionWithIndex(int index) {
         nodeConnections[index].DisconnectBoth();
+        connectionDataParent.QueueData(nodeConnections[index].ConnectionData);
 
         Destroy(nodeConnections[index].gameObject);
         nodeConnections.RemoveAt(index);
@@ -556,7 +557,7 @@ public class GraphHandler : MonoBehaviour {
     /// <summary>
     /// Seperates the given nodes. If the given nodes are null all the nodes will be seperated
     /// </summary>
-    public void SeperateNodes(NodeHandler[] nodes = null, float repulsion = 0.8f, float stiffness = 0.9f, float springLength = 7f) {
+    public void SeperateNodes(NodeHandler[] nodes = null, float repulsion = 3f, float stiffness = 0.08f, float springLength = 8f) {
         NodePhysicsWrapper[] _nodes;
         // if nodes is null then use all nodes
         if (nodes == null) _nodes = this.nodes.Select(node => new NodePhysicsWrapper(node)).ToArray();
@@ -565,10 +566,21 @@ public class GraphHandler : MonoBehaviour {
         StartCoroutine(SeperateNodeCoroutine(_nodes, repulsion, stiffness, springLength));
     }
     private IEnumerator SeperateNodeCoroutine(NodePhysicsWrapper[] _nodes, float repulsion, float stiffness, float springLength) {
+        /* while (true) { // Used for debugging
+            
+            float areaMultiply = Mathf.Sqrt(_nodes.Length);
+            foreach (NodePhysicsWrapper w in _nodes) {
+                Vector3 position = new Vector3(
+                    Random.Range(0f, areaMultiply * 2f) - areaMultiply,
+                    Random.Range(0f, areaMultiply * 2f) - areaMultiply
+                    );
+                w.node.transform.position = position;
+            }*/
+
         bool hasEnoughEnergy = true;
         int iterationCount = 0;
-        int maxIteration = 50;
-
+        int maxIteration = _nodes.Length > 10 ? (int) (50 * (1 + Mathf.Log10(_nodes.Length - 10))) : 50;
+            
         // first get the center
         Vector3 centerPos = new Vector3();
         for (int i = 0; i < _nodes.Length; i++) centerPos += _nodes[i].node.Position;
@@ -597,7 +609,7 @@ public class GraphHandler : MonoBehaviour {
 
                 // now we can attract to center
                 var directionCenter = centerPos - _nodes[i].node.Position;
-                _nodes[i].ApplyForce(directionCenter * (repulsion / 50f)); // make some times less influential than the coulomb force
+                _nodes[i].ApplyForce(directionCenter * (repulsion / 200f)); // make some times less influential than the coulomb force
             }
 
             // *** Apply Hookes's law ***
@@ -644,7 +656,7 @@ public class GraphHandler : MonoBehaviour {
             // so we sample the energy in the first 80% then if we find a smaller one than the smallest * 1.2f then stop there
             // TODO try average
             if (iterationCount > maxIteration * 0.8f) {
-                if (totalEnergy < minimum * 1.2f)
+                if (totalEnergy < minimum * 1.1f)
                     hasEnoughEnergy = false;
             } else if (totalEnergy < minimum) {
                 minimum = totalEnergy;
@@ -654,7 +666,9 @@ public class GraphHandler : MonoBehaviour {
         }
 
         Debug.Log(iterationCount + " " + minimum);
+        // yield return new WaitForSeconds(2.5f);
         EnterEditMode();
+        // } // Used for debugging
     }
 
     /// <summary>
