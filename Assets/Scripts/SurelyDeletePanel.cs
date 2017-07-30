@@ -6,6 +6,8 @@ using DG.Tweening;
 [RequireComponent(typeof(RectTransform))]
 public class SurelyDeletePanel : MonoBehaviour {
 
+    private GameState gameState;
+
     private const float animTime = 0.3f;
 
     private RectTransform rectTransform;
@@ -34,6 +36,13 @@ public class SurelyDeletePanel : MonoBehaviour {
     }
 
     void Start() {
+        // gamestate changes
+        gameState = FindObjectOfType<GameState>();
+        gameState.OnStateChange += (oldState, newState) => {
+            if (newState == GameState.State.Editing)
+                HidePanel();
+        };
+
         rectTransform = GetComponent<RectTransform>();
 
         yesButton = transform.Find("YesButton").GetComponent<Button>();

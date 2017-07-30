@@ -35,7 +35,7 @@ public class NodeName : MonoBehaviour {
     /// </summary>
     private Vector3 offsetBy = new Vector3();
     
-    void Update() {
+    public void Update() {
         RectTransf.anchoredPosition = Camera.main.WorldToScreenPoint(nodeToFollow.transform.position + offsetBy);
 
         UpdateText();
@@ -54,7 +54,7 @@ public class NodeName : MonoBehaviour {
     }
 
     private void UpdateText() {
-        Text.text = nodeToFollow.name + "\n<size=60%>" + nodeToFollow.InfectedCount + "/" + nodeToFollow.PatchedCount + "/" + nodeToFollow.HostCount;
+        Text.text = nodeToFollow.name + "\n<size=60%>" + nodeToFollow.InfectedCount + "/" + nodeToFollow.RecoveredCount + "/" + nodeToFollow.HostCount;
         name = nodeToFollow.name + "Text";
     }
 }

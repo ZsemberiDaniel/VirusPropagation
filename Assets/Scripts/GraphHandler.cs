@@ -1,22 +1,23 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
+using UnityEngine.Events;
 
 [RequireComponent(typeof(LineRenderer))]
 public class GraphHandler : MonoBehaviour {
 
-    // The four variables of the virus
-    [Range(0.01f, 1f)]
-    public float S2I = 0f;
-    [Range(0.01f, 1f)]
-    public float I2R = 0f;
-    [Range(0.01f, 1f)]
-    public float S2R = 0f;
-    public int packetSize = 0;
+    // The whole game state
+    private GameState gameState;
+    public GameState GameState {
+        get { return gameState; }
+    }
 
+
+    // For handling nodes and connections in the scene
     [SerializeField]
     private GameObject nodePrefab;
     private GameObject nodeParent;
@@ -24,6 +25,14 @@ public class GraphHandler : MonoBehaviour {
     private GameObject connectionPrefab;
     private GameObject connectionParent;
 
+    private NodeNameParent nodeNameParent;
+    private ConnectionDataParent connectionDataParent;
+
+    private List<NodeHandler> nodes;
+    private List<NodeConnection> nodeConnections;
+
+
+    // UI
     [SerializeField]
     private Toggle addEditToggle;
 
@@ -33,9 +42,9 @@ public class GraphHandler : MonoBehaviour {
     private LineRenderer connectStartLineRenderer;
 
     private EditPanel editPanel;
-    private NodeNameParent nodeNameParent;
-    private ConnectionDataParent connectionDataParent;
 
+
+    // Selections
     private int selectedNode = -1;
     private int SelectedNode {
         set {
@@ -65,13 +74,27 @@ public class GraphHandler : MonoBehaviour {
         get { return connectStartNode; }
     }
 
-    private List<NodeHandler> nodes;
-    private List<NodeConnection> nodeConnections;
+
+    // Simulation
+    private Coroutine simulationCoroutine;
+    private bool simulationPaused = false;
+    public bool SimulationPaused {
+        get { return simulationPaused; }
+    }
+
+    private PacketPooling packetPooling;
+
+    void Awake() {
+        gameState = ScriptableObject.CreateInstance<GameState>();
+        gameState.hideFlags = HideFlags.DontUnloadUnusedAsset;
+    }
 
     void Start() {
+        #region Find stuff
         editPanel = FindObjectOfType<EditPanel>();
         nodeNameParent = FindObjectOfType<NodeNameParent>();
         connectionDataParent = FindObjectOfType<ConnectionDataParent>();
+        packetPooling = FindObjectOfType<PacketPooling>();
 
         nodeParent = new GameObject("NodeParent");
         nodeParent.transform.parent = transform;
@@ -82,7 +105,32 @@ public class GraphHandler : MonoBehaviour {
 
         nodes = new List<NodeHandler>();
         nodeConnections = new List<NodeConnection>();
-	}
+        #endregion
+
+        Settings.Instance.onShowNodeLabelChanged += (show) => {
+            if (show) nodeNameParent.Show();
+            else nodeNameParent.Hide();
+        };
+        Settings.Instance.onShowConnectionLabelChanged += (show) => {
+            if (show) connectionDataParent.Show();
+            else connectionDataParent.Hide();
+        };
+
+        // when game state changes
+        gameState.OnStateChange += (oldState, newState) => {
+            switch (newState) {
+                case GameState.State.Adding:
+                    addEditToggle.isOn = false;
+
+                    SelectedNode = -1;
+                    SelectedConnection = -1;
+                    break;
+                case GameState.State.Editing:
+                    addEditToggle.isOn = true;
+                    break;
+            }
+        };
+    }
 
     /// <summary>
     /// Used when a node is being moved. If it's not -1 then one is being moved.
@@ -149,12 +197,12 @@ public class GraphHandler : MonoBehaviour {
             // Left mouse button down
             if (Input.GetMouseButtonDown(0)) {
                 // Adding
-                if (!addEditToggle.isOn) {
+                if (gameState.gState == GameState.State.Adding) {
                     if (aboveNodeIndex == -1) {
                         AddNodeAtPos(mouseWorldPos);
                     }
                 // Select
-                } else {
+                } else if (gameState.gState == GameState.State.Editing) {
                     mousePanStartedAt = mouseWorldPos;
                     if (aboveNodeIndex != -1) { 
                         SelectedNode = aboveNodeIndex;
@@ -177,7 +225,7 @@ public class GraphHandler : MonoBehaviour {
             if (Input.GetMouseButton(0)) {
                 // Editing
                 // The second part: we started the holding down on a node or we have not released the button yet
-                if (addEditToggle.isOn) {
+                if (gameState.gState == GameState.State.Editing) {
                     // we are above a node when moving the mouse around so let that be the moving node
                     if (aboveNodeIndex != -1 && whichNodeIsBeingMoved == -1) { 
                         whichNodeIsBeingMoved = aboveNodeIndex;
@@ -198,7 +246,7 @@ public class GraphHandler : MonoBehaviour {
             // Left mouse button up
             if (Input.GetMouseButtonUp(0)) {
                 // Editing
-                if (addEditToggle.isOn) {
+                if (gameState.gState == GameState.State.Editing) {
                     whichNodeIsBeingMoved = -1;
                 }
             }
@@ -206,7 +254,7 @@ public class GraphHandler : MonoBehaviour {
             // Right mouse button
             if (Input.GetMouseButtonDown(1)) {
                 // Adding
-                if (!addEditToggle.isOn) {
+                if (gameState.gState == GameState.State.Adding) {
                     // Remove if a node is clicked
                     if (aboveNodeIndex != -1) {
                         RemoveNodeWithIndexWithSurePanel(aboveNodeIndex);
@@ -215,7 +263,7 @@ public class GraphHandler : MonoBehaviour {
                         RemoveConnectionWithIndexWithSurePanel(aboveLineIndex);
                     }
                 // Editing
-                } else {
+                } else if (gameState.gState == GameState.State.Editing) {
                     // Selected none -> deselect the start thing
                     if (aboveNodeIndex == -1) { 
                         ConnectStartNode = -1;
@@ -245,7 +293,7 @@ public class GraphHandler : MonoBehaviour {
 
         // add or edit toggle
         if (Input.GetKeyDown(KeyCode.Tab)) {
-            ToggleAddEditMode();
+            gameState.ToggleAddEditMode();
         }
         #endregion
     }
@@ -262,44 +310,6 @@ public class GraphHandler : MonoBehaviour {
     }
 
     /// <summary>
-    /// Toggle the add/edit mode
-    /// </summary>
-    private void ToggleAddEditMode() {
-        // Adding
-        if (addEditToggle.isOn) {
-            EnterAddMode();
-        // Editing
-        } else {
-            EnterEditMode();
-        }
-    }
-
-    /// <summary>
-    /// Enters the add mode. If already in add mode it does nothing
-    /// </summary>
-    private void EnterAddMode() {
-        if (!addEditToggle.isOn) return;
-
-        addEditToggle.isOn = false;
-
-        editPanel.HidePanel();
-        SelectedNode = -1;
-        SelectedConnection = -1;
-    }
-
-    /// <summary>
-    /// Enters the edit mode. If already in edit mode it does nothing
-    /// </summary>
-    private void EnterEditMode() {
-        if (addEditToggle.isOn) return;
-
-        addEditToggle.isOn = true;
-
-        areYouSurePanel.HidePanel();
-        editPanel.ShowPanel();
-    }
-
-    /// <summary>
     /// Connect these node mutually in the nodes list. The indices are the ones from the nodes list
     /// </summary>
     private void ConnectTwoNodes(int index1, int index2, int capacity) {
@@ -313,7 +323,7 @@ public class GraphHandler : MonoBehaviour {
         if (one.Equals(two)) return;
 
         // If there already is a connection like this then return
-        var connectedToOne = one.ConnectedToNodes;
+        var connectedToOne = one.GetConnectedToNodes();
         for (int i = 0; i < connectedToOne.Count; i++)
             if (connectedToOne[i].Equals(two))
                 return;
@@ -323,8 +333,8 @@ public class GraphHandler : MonoBehaviour {
         connection.SetNodes(one, two);
         connection.Capacity = capacity;
 
-        one.ConnectTo(two);
-        two.ConnectTo(one);
+        one.ConnectTo(two, connection);
+        two.ConnectTo(one, connection);
 
         nodeConnections.Add(connection);
 
@@ -354,7 +364,7 @@ public class GraphHandler : MonoBehaviour {
     /// </summary>
     private void RemoveNodeWithIndex(int index) {
         // First update node connections that it is connected to
-        var others = nodes[index].ConnectedToNodes;
+        var others = nodes[index].GetConnectedToNodes();
         for (int k = 0; k < others.Count; k++)
             others[k].Disconnect(nodes[index]);
 
@@ -509,6 +519,106 @@ public class GraphHandler : MonoBehaviour {
         }
     }
 
+    public void StartSimulation() {
+        gameState.gState = GameState.State.Simulating;
+        simulationCoroutine = StartCoroutine(StepVirus());
+    }
+    public void PauseSimulationToggle() {
+        if (simulationPaused) UnPauseSimulation();
+        else PauseSimulation();
+    }
+    public void PauseSimulation() {
+        simulationPaused = true;
+    }
+    public void UnPauseSimulation() {
+        simulationPaused = false;
+    }
+    public void StopSimulation() {
+        // TODO stop the simulation
+        gameState.gState = GameState.State.Adding;
+        StopCoroutine(simulationCoroutine);
+    }
+    private IEnumerator StepVirus() {
+        while (true) {
+            while (simulationPaused) {
+                yield return null;
+            }
+
+            // Spread the virus
+            Dictionary<Tuple<NodeHandler, NodeHandler>, int> infectCounts = new Dictionary<Tuple<NodeHandler, NodeHandler>, int>();
+            for (int i = 0; i < nodes.Count; i++) {
+                int startInfectedCount = nodes[i].InfectedCount; // because more will be added this tick and those are 'sleeping'
+                for (int h = 0; h < startInfectedCount; h++) {
+                    // Has a random chance to infect
+                    if (UnityEngine.Random.Range(0f, 1f) <= gameState.S2I) {
+                        var infect = nodes[i].GetRandomConnection();
+
+                        int count;
+
+                        // infect itself
+                        if (infect.connection == null) {
+                            var tuple = Tuple.Create(nodes[i], nodes[i]);
+                            infectCounts.TryGetValue(tuple, out count);
+                            infectCounts[tuple] = count + 1;
+                        } else { // infect someone else -> we need to check the connection bandwidth
+                            // if packet can be sent
+                            if (infect.node.HasInfectable() && infect.connection.SendPacket(gameState.packetSize)) {
+                                var tuple = Tuple.Create(nodes[i], infect.node);
+                                infectCounts.TryGetValue(tuple, out count);
+                                infectCounts[tuple] = count + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            float travelTime = 0.3f / Settings.Instance.SimulationSpeed;
+            foreach (var key in infectCounts.Keys) {
+                if (!key.Item1.Equals(key.Item2)) {
+                    packetPooling.GetPacket().MoveThenPool(key.Item1.PositionMiddle, 
+                        key.Item2.PositionMiddle, travelTime, packetPooling);
+                }
+            }
+
+            // do all the math after the packets arrived
+            StartCoroutine(ExecuteAfterSeconds(() => {
+                // infect
+                foreach (var key in infectCounts.Keys) {
+                    key.Item2.Infect(infectCounts[key]);
+                }
+
+                // recover the infected and patch the not infected
+                for (int i = 0; i < nodes.Count; i++) {
+                    // recover infected
+                    int startInfectedCount = nodes[i].InfectedCount; // because some will be removed this tick
+                    for (int h = 0; h < startInfectedCount; h++) {
+                        if (UnityEngine.Random.Range(0f, 1f) <= gameState.I2R) {
+                            nodes[i].RecoverInfected(1);
+                        }
+                    }
+
+                    // patch not infected
+                    int startNormalHost = nodes[i].NormalCount;
+                    for (int h = 0; h < startNormalHost; h++) {
+                        if (UnityEngine.Random.Range(0f, 1f) <= gameState.S2R) {
+                            nodes[i].RecoverNormal(1);
+                        }
+                    }
+                }
+            }, travelTime));
+
+            // Reset the bandwidth on the connections
+            for (int i = 0; i < nodeConnections.Count; i++) {
+                nodeConnections[i].ResetBandwidth();
+            }
+            yield return new WaitForSeconds(0.1f / Settings.Instance.SimulationSpeed);
+        }
+    }
+    private IEnumerator ExecuteAfterSeconds(UnityAction action, float time) {
+        yield return new WaitForSeconds(time);
+
+        action.Invoke();
+    }
+
     /// <summary>
     /// Adds the nodes based on the given ParserNodes. If a node cannot be added because it's name
     /// then it won't be added. The same goes for a connection. If either one of the connecting neighbours cannot
@@ -524,8 +634,8 @@ public class GraphHandler : MonoBehaviour {
             // place it at a random pos
             float areaMultiply = Mathf.Sqrt(nodesToBeAdded.Length);
             Vector3 position = new Vector3(
-                Random.Range(0f, areaMultiply * 2f) - areaMultiply, 
-                Random.Range(0f, areaMultiply * 2f) - areaMultiply
+                UnityEngine.Random.Range(0f, areaMultiply * 2f) - areaMultiply,
+                UnityEngine.Random.Range(0f, areaMultiply * 2f) - areaMultiply
                 );
 
             // Add node
@@ -614,7 +724,7 @@ public class GraphHandler : MonoBehaviour {
 
             // *** Apply Hookes's law ***
             for (int i = 0; i < _nodes.Length; i++) {
-                var connectedToNames = _nodes[i].node.ConnectedToNodes.Select(node => node.name);
+                var connectedToNames = _nodes[i].node.GetConnectedToNodes().Select(node => node.name);
 
                 // Go through only the ones that are connected to this node
                 for (int k = 0; k < _nodes.Length; k++) {
@@ -667,7 +777,7 @@ public class GraphHandler : MonoBehaviour {
 
         Debug.Log(iterationCount + " " + minimum);
         // yield return new WaitForSeconds(2.5f);
-        EnterEditMode();
+        gameState.gState = GameState.State.Editing;
         // } // Used for debugging
     }
 

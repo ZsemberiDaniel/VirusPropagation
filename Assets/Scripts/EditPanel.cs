@@ -3,6 +3,9 @@ using DG.Tweening;
 
 public class EditPanel : MonoBehaviour {
 
+    private GameState gameState;
+
+    // the different panels
     [SerializeField]
     private RectTransform nodeAttributePanel;
     private NodeAttributePanel nodeAttributePanelHandler;
@@ -13,15 +16,30 @@ public class EditPanel : MonoBehaviour {
     private ConnectionAttributePanel connectionAttributePanelHandler;
     public ConnectionAttributePanel ConnectionAttributePanel { get { return connectionAttributePanelHandler; } }
 
+    // which panel is shown if it is shown
     private AttributePanelType attributePanelType = AttributePanelType.node;
     private bool shown = false;
 
+    // animation stuff
     private float hiddenPositionX;
     private float shownPositionX;
 
     private float time = 0.3f;
 
     private void Start() {
+        gameState = FindObjectOfType<GameState>();
+        gameState.OnStateChange += (oldState, newState) => {
+            switch (newState) {
+                case GameState.State.Simulating:
+                case GameState.State.Adding:
+                    HidePanel();
+                    break;
+                case GameState.State.Editing:
+                    ShowPanel();
+                    break;
+            }
+        };
+
         // set the panels' sizes
         nodeAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, nodeAttributePanel.sizeDelta.y);
         connectionAttributePanel.sizeDelta = new Vector2(Camera.main.pixelWidth * 0.25f, connectionAttributePanel.sizeDelta.y);

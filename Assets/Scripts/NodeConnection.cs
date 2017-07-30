@@ -28,6 +28,21 @@ public class NodeConnection : MonoBehaviour {
         get { return usedCapacity; }
     }
 
+    /// <summary>
+    /// Should be used for showing the user how much data is being used (usedCapacity)
+    /// because this won't be reset every tick, which makes it 0 every time
+    /// we want to draw it
+    /// </summary>
+    private int shownCapacity = 0;
+    /// <summary>
+    /// Should be used for showing the user how much data is being used (UsedCapacity)
+    /// because this won't be reset every tick, which makes it 0 every time
+    /// we want to draw it
+    /// </summary>
+    public int ShownCapacity {
+        get { return shownCapacity; }
+    }
+
     private ConnectionData connectionData;
     public ConnectionData ConnectionData {
         set { connectionData = value; }
@@ -46,6 +61,31 @@ public class NodeConnection : MonoBehaviour {
     }
     private void Update() {
         UpdateLineRenderer();
+    }
+
+    /// <summary>
+    /// Can you send this packet on this connection?
+    /// </summary>
+    public bool CanHandlePacket(int packetSize) {
+        return capacity - usedCapacity >= packetSize;
+    }
+    /// <summary>
+    /// Only sends the packet if it is possible to be sent
+    /// </summary>
+    public bool SendPacket(int packetSize) {
+        if (CanHandlePacket(packetSize)) { 
+            usedCapacity += packetSize;
+            return true;
+        }
+
+        return false;
+    }
+    /// <summary>
+    /// Resets the bandwidth of this connection
+    /// </summary>
+    public void ResetBandwidth() {
+        shownCapacity = usedCapacity;
+        usedCapacity = 0;
     }
 
     public void SetNodes(NodeHandler one, NodeHandler two) {

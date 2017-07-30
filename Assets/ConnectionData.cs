@@ -30,7 +30,7 @@ public class ConnectionData : MonoBehaviour {
         }
     }
 
-    void Update() {
+    public void Update() {
         RectTransf.anchoredPosition = Camera.main.WorldToScreenPoint(connectionToFollow.MiddlePos);
 
         UpdateText();
@@ -46,7 +46,7 @@ public class ConnectionData : MonoBehaviour {
     }
 
     private void UpdateText() {
-        Text.text = connectionToFollow.UsedCapacity + "/" + connectionToFollow.Capacity;
+        Text.text = connectionToFollow.ShownCapacity + "/" + connectionToFollow.Capacity;
         name = connectionToFollow.name + "Text";
     }
 }

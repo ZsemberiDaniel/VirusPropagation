@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using UnityEngine;
+using System.Linq;
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(LineRenderer))]
@@ -26,22 +27,29 @@ public class NodeHandler : MonoBehaviour {
         get { return infectedCount; }
         set {
             if (value < 0) throw new System.ArgumentException("Infected count cannot be lower than 0!");
-            else if (value > HostCount - PatchedCount) throw new System.ArgumentException("Infected count cannot be higher than host count minus patched!");
+            else if (value > HostCount - RecoveredCount) throw new System.ArgumentException("Infected count cannot be higher than host count minus patched!");
             else infectedCount = value;
         }
     }
 
-    private int patchedCount = 0;
+    private int recoveredCount = 0;
     /// <summary>
     /// How many hosts are patched
     /// </summary>
-    public int PatchedCount {
-        get { return patchedCount; }
+    public int RecoveredCount {
+        get { return recoveredCount; }
         set {
             if (value < 0) throw new System.ArgumentException("Patched count cannot be lower than 0!");
             else if (value > HostCount - InfectedCount) throw new System.ArgumentException("Patched count cannot be higher than host count minus infected!");
-            else patchedCount = value;
+            else recoveredCount = value;
         }
+    }
+
+    /// <summary>
+    /// The host count which are neither recovered, neither infected
+    /// </summary>
+    public int NormalCount {
+        get { return hostCount - infectedCount - recoveredCount; }
     }
 
     private Color normalColor = new Color(1, 1, 1, 0);
@@ -55,7 +63,7 @@ public class NodeHandler : MonoBehaviour {
     [SerializeField]
     private Color infectedColor;
     [SerializeField]
-    private Color patchedColor;
+    private Color recoveredColor;
 
     private bool selected = false;
     public bool Selected {
@@ -114,7 +122,8 @@ public class NodeHandler : MonoBehaviour {
     public bool DoesNoLongerNeedNodeNameHandler() { return HasNodeNameHandler() && !IsRendered(); }
 
     /// <summary>
-    /// The position of the node in the world. Please use this instead of transform.position
+    /// The position of the node in the world. Please use this instead of transform.position.
+    /// No longer need to use it, but will keep it here for legacy code
     /// </summary>
     public Vector3 Position {
         get { return transform.position; }
@@ -130,11 +139,20 @@ public class NodeHandler : MonoBehaviour {
         get { return Position + Size / 2f; }
     }
 
-    private List<NodeHandler> connectedTo;
-    public ReadOnlyCollection<NodeHandler> ConnectedToNodes {
-        get {
-            return connectedTo.AsReadOnly();
-        }
+    private List<ConnectionWrapper> connectedTo;
+    /// <summary>
+    /// Does some computation so maybe store the result
+    /// </summary>
+    public ReadOnlyCollection<NodeHandler> GetConnectedToNodes() {
+        return connectedTo.Select(element => element.node).ToList().AsReadOnly();
+    }
+    public ReadOnlyCollection<ConnectionWrapper> GetConnectedToNodesWithWrapper() { return connectedTo.AsReadOnly(); }
+    /// <summary>
+    /// Returns a random connection (may be itself, if that's the case the connection part will be null)
+    /// </summary>
+    public ConnectionWrapper GetRandomConnection() {
+        return Random.Range(0, connectedTo.Count + 1) == 0 ?
+            new ConnectionWrapper(this, null) : connectedTo[Random.Range(0, connectedTo.Count)];
     }
 
     private SpriteRenderer fadeSpriteRenderer;
@@ -143,7 +161,7 @@ public class NodeHandler : MonoBehaviour {
     private SpriteRenderer patchedSpriteRenderer;
     
 	void Awake() {
-        connectedTo = new List<NodeHandler>();
+        connectedTo = new List<ConnectionWrapper>();
 
         fadeSpriteRenderer = GetComponent<SpriteRenderer>();
         // Use numbers so the patched is always below the infected and the normal is the lowest
@@ -155,7 +173,7 @@ public class NodeHandler : MonoBehaviour {
         // Set the proportion spriterenderers' colors
         normalSpriteRenderer.color = normalHostColor;
         infectedSpriteRenderer.color = infectedColor;
-        patchedSpriteRenderer.color = patchedColor;
+        patchedSpriteRenderer.color = recoveredColor;
 
         // Set tha fade colors to the correct alpha
         selectedColor = new Color(selectedColor.r, selectedColor.g, selectedColor.b, 0.3f);
@@ -178,7 +196,7 @@ public class NodeHandler : MonoBehaviour {
     /// HostCount, InfectedCount and PatchedCount;
     /// </summary>
     private void UpdateSpriteRenderersToSIRProportion() {
-        float patchedPercent = ((float) PatchedCount) / HostCount;
+        float patchedPercent = ((float) RecoveredCount) / HostCount;
         float infectedPercent = ((float) InfectedCount) / HostCount;
 
         // Because the patched is below the infected it needs the infected height plus the patched height
@@ -193,9 +211,9 @@ public class NodeHandler : MonoBehaviour {
     /// Also updates the linerednerer
     /// </summary>
     /// <return>Whether it could be connected or not</return>
-    public bool ConnectTo(NodeHandler other) {
-        if (!connectedTo.Contains(other)) {
-            connectedTo.Add(other);
+    public bool ConnectTo(NodeHandler other, NodeConnection connection) {
+        if (!IsConnectedTo(other)) {
+            connectedTo.Add(new ConnectionWrapper(other, connection));
 
             return true;
         }
@@ -207,13 +225,70 @@ public class NodeHandler : MonoBehaviour {
     /// Disconnects the given connection
     /// </summary>
     public void Disconnect(NodeHandler connection) {
-        if (connectedTo.Remove(connection)) {
+        int at;
+        if (IsConnectedTo(connection, out at)) {
+            connectedTo.RemoveAt(at);
         }
+    }
+
+    public bool IsConnectedTo(NodeHandler other) {
+        int at;
+        return IsConnectedTo(other, out at);
+    }
+    public bool IsConnectedTo(NodeHandler other, out int at) {
+        for (int i = 0; i < connectedTo.Count; i++) {
+            if (connectedTo[i].node == other) {
+                at = i;
+                return true;
+            }
+        }
+        at = -1;
+        return false;
     }
 
     /// <returns>Whether the sprite of this node contains the pos in the world</returns>
     public bool Contains(Vector2 pos) {
         return fadeSpriteRenderer.bounds.Contains(pos);
+    }
+
+
+    /// <summary>
+    /// Infect count amount hosts
+    /// </summary>
+    public void Infect(int count) {
+        int normalCount = NormalCount;
+        if (normalCount != 0) {
+            infectedCount += Mathf.Min(count, normalCount);
+        }
+    }
+
+    /// <summary>
+    /// Recover count amount infected hosts
+    /// </summary>
+    public void RecoverInfected(int count) {
+        if (infectedCount != 0) {
+            count = Mathf.Min(count, infectedCount);
+            infectedCount -= count;
+            recoveredCount += count;
+        }
+    }
+
+    /// <summary>
+    /// Recoveres count amount of not infected hosts
+    /// </summary>
+    public void RecoverNormal(int count) {
+        int normalCount = NormalCount;
+        if (normalCount != 0) {
+            count = Mathf.Min(count, normalCount);
+            recoveredCount += count;
+        }
+    }
+
+    /// <summary>
+    /// Whether this group has infectable hosts (normal)
+    /// </summary>
+    public bool HasInfectable() {
+        return NormalCount > 0;
     }
 
     public override int GetHashCode() {
@@ -225,5 +300,15 @@ public class NodeHandler : MonoBehaviour {
         }
 
         return base.Equals(other);
+    }
+
+    public struct ConnectionWrapper {
+        public NodeHandler node;
+        public NodeConnection connection;
+
+        public ConnectionWrapper(NodeHandler node, NodeConnection connection) {
+            this.node = node;
+            this.connection = connection;
+        }
     }
 }

@@ -2,13 +2,9 @@
 
 public class Settings : ScriptableObject {
 
-    private static Settings _instance;
+    private static Settings _instance = CreateInstance<Settings>();
     public static Settings Instance {
         get {
-            if (!_instance) {
-
-            }
-
             return _instance;
         }
     }
@@ -21,7 +17,7 @@ public class Settings : ScriptableObject {
     public bool ShowNodeLabel {
         get { return showNodeLabel; }
         set {
-            ShowNodeLabel = value;
+            showNodeLabel = value;
             onShowNodeLabelChanged?.Invoke(value);
         }
     }
@@ -34,6 +30,14 @@ public class Settings : ScriptableObject {
         set {
             showConnectionLabel = value;
             onShowConnectionLabelChanged?.Invoke(value);
+        }
+    }
+
+    private float simulationSpeed = 1f;
+    public float SimulationSpeed {
+        get { return simulationSpeed; }
+        set {
+            simulationSpeed = value;
         }
     }
 	

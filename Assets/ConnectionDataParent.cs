@@ -29,4 +29,15 @@ public class ConnectionDataParent : MonoBehaviour {
         data.gameObject.SetActive(false);
         this.data.Enqueue(data);
     }
+
+    public void Show() {
+        gameObject.SetActive(true);
+        // we need to update their position so they don't jump there on the screen
+        System.Array.ForEach(transform.GetComponentsInChildren<ConnectionData>(), (connection) => {
+            connection.Update();
+        });
+    }
+    public void Hide() {
+        gameObject.SetActive(false);
+    }
 }

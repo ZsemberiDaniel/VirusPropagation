@@ -41,10 +41,10 @@ public class InputPanel : MonoBehaviour {
 
             try { 
                 nodes = InputParser.Parse(inputField.text, 
-                    out graphHandler.S2I, 
-                    out graphHandler.I2R, 
-                    out graphHandler.S2R, 
-                    out graphHandler.packetSize);
+                    out graphHandler.GameState.S2I, 
+                    out graphHandler.GameState.I2R, 
+                    out graphHandler.GameState.S2R, 
+                    out graphHandler.GameState.packetSize);
             } catch (System.FormatException e) {
                 // TODO input not correct!!
                 return;
@@ -54,6 +54,17 @@ public class InputPanel : MonoBehaviour {
             inputField.text = "";
             Close();
         });
+
+        // game state change
+        FindObjectOfType<GameState>().OnStateChange += (oldState, newState) => {
+            if (newState == GameState.State.Simulating) {
+                dropdownButtonRectTranform.gameObject.SetActive(false);
+
+                Close();
+            } else if (oldState == GameState.State.Simulating) {
+                dropdownButtonRectTranform.gameObject.SetActive(true);
+            }
+        };
 	}
 
     private void Update() {

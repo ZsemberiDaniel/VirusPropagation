@@ -29,4 +29,15 @@ public class NodeNameParent : MonoBehaviour {
         text.gameObject.SetActive(false);
         texts.Enqueue(text);
     }
+
+    public void Show() {
+        gameObject.SetActive(true);
+        // we need to update their position so they don't jump there on the screen
+        System.Array.ForEach(transform.GetComponentsInChildren<NodeName>(), (node) => {
+            node.Update();
+        });
+    }
+    public void Hide() {
+        gameObject.SetActive(false);
+    }
 }

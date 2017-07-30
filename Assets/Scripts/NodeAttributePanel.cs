@@ -150,7 +150,7 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
 
         // Connected to
         connectedToText.text = "";
-        var connectedTo = currentNode.ConnectedToNodes;
+        var connectedTo = currentNode.GetConnectedToNodes();
         for (int i = 0; i < connectedTo.Count; i++)
             connectedToText.text += connectedTo[i].name + "\n";
 
