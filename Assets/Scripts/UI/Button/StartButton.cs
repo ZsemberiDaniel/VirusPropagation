@@ -30,6 +30,9 @@ public class StartButton : MonoBehaviour {
         buttonText = GetComponentInChildren<TMP_Text>();
         buttonImage = GetComponent<Image>();
 
+        buttonText.text = playText;
+        buttonImage.color = playColor;
+
         GetComponent<Button>().onClick.AddListener(() => {
             if (gameState.gState == GameState.State.Simulating) {
                 graphHandler.PauseSimulationToggle();
@@ -48,5 +51,13 @@ public class StartButton : MonoBehaviour {
                 buttonImage.color = pauseColor;
             }
         });
+
+        FindObjectOfType<GameState>().OnStateChange += (oldState, newState) => {
+            // exit simulation -> reset
+            if (oldState == GameState.State.Simulating) {
+                buttonText.text = playText;
+                buttonImage.color = playColor;
+            }
+        };
 	}
 }

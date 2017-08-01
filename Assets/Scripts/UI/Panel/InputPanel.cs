@@ -8,12 +8,17 @@ public class InputPanel : MonoBehaviour {
     private float animationSpeed = 1f;
 
     private RectTransform rectTransform;
+
     [SerializeField]
     private RectTransform dropdownButtonRectTranform;
     [SerializeField]
     private Button parseButton;
     [SerializeField]
     private TMP_InputField inputField;
+    [SerializeField]
+    private Button randomButton;
+    [SerializeField]
+    private TMP_InputField randomNodeInputField;
 
     private GraphHandler graphHandler;
 
@@ -49,9 +54,22 @@ public class InputPanel : MonoBehaviour {
                 // TODO input not correct!!
                 return;
             }
-            
+
             graphHandler.SeperateNodes(graphHandler.AddNodes(nodes));
             inputField.text = "";
+            Close();
+        });
+
+        // random button click listener
+        randomButton.onClick.AddListener(() => {
+            ParserNode[] nodes = InputParser.Random(int.Parse(randomNodeInputField.text),
+                out graphHandler.GameState.S2I,
+                out graphHandler.GameState.I2R,
+                out graphHandler.GameState.S2R,
+                out graphHandler.GameState.packetSize);
+
+            graphHandler.SeperateNodes(graphHandler.AddNodes(nodes));
+            randomNodeInputField.text = "";
             Close();
         });
 

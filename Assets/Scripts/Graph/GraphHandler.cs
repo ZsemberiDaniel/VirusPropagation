@@ -43,6 +43,7 @@ public class GraphHandler : MonoBehaviour {
 
     private EditPanel editPanel;
 
+    private SIRChart chart;
 
     // Selections
     private int selectedNode = -1;
@@ -95,6 +96,7 @@ public class GraphHandler : MonoBehaviour {
         nodeNameParent = FindObjectOfType<NodeNameParent>();
         connectionDataParent = FindObjectOfType<ConnectionDataParent>();
         packetPooling = FindObjectOfType<PacketPooling>();
+        chart = FindObjectOfType<SIRChart>();
 
         nodeParent = new GameObject("NodeParent");
         nodeParent.transform.parent = transform;
@@ -534,7 +536,6 @@ public class GraphHandler : MonoBehaviour {
         simulationPaused = false;
     }
     public void StopSimulation() {
-        // TODO stop the simulation
         gameState.gState = GameState.State.Adding;
         StopCoroutine(simulationCoroutine);
     }
@@ -581,6 +582,9 @@ public class GraphHandler : MonoBehaviour {
 
             // do all the math after the packets arrived
             StartCoroutine(ExecuteAfterSeconds(() => {
+                int infectCount = 0;
+                int hostCount = 0;
+
                 // infect
                 foreach (var key in infectCounts.Keys) {
                     key.Item2.Infect(infectCounts[key]);
@@ -603,14 +607,19 @@ public class GraphHandler : MonoBehaviour {
                             nodes[i].RecoverNormal(1);
                         }
                     }
+
+                    hostCount += nodes[i].HostCount;
+                    infectCount += nodes[i].InfectedCount;
                 }
+
+                chart.AddData((float) infectCount / hostCount);
             }, travelTime));
 
             // Reset the bandwidth on the connections
             for (int i = 0; i < nodeConnections.Count; i++) {
                 nodeConnections[i].ResetBandwidth();
             }
-            yield return new WaitForSeconds(0.1f / Settings.Instance.SimulationSpeed);
+            yield return new WaitForSeconds(0.2f / Settings.Instance.SimulationSpeed);
         }
     }
     private IEnumerator ExecuteAfterSeconds(UnityAction action, float time) {
@@ -628,8 +637,16 @@ public class GraphHandler : MonoBehaviour {
         NodeHandler[] newNodes = new NodeHandler[nodesToBeAdded.Length];
 
         // add all the nodes
-        for (int i = 0; i < nodesToBeAdded.Length; i++) { 
-            if (IsNameTaken(nodesToBeAdded[i].name)) continue;
+        for (int i = 0; i < nodesToBeAdded.Length; i++) {
+            // if name is taken -> give another name
+            if (IsNameTaken(nodesToBeAdded[i].name)) {
+                string newName;
+                do {
+                    newName = nodesToBeAdded[i].name + "#" + UnityEngine.Random.Range(0, 10000);
+                } while (IsNameTaken(newName));
+
+                nodesToBeAdded[i].name = newName;
+            }
 
             // place it at a random pos
             float areaMultiply = Mathf.Sqrt(nodesToBeAdded.Length);
@@ -646,19 +663,23 @@ public class GraphHandler : MonoBehaviour {
             newNodes[i].InfectedCount = nodesToBeAdded[i].infectedCount;
         }
 
-        // Now connect the to their neighbours
+        // Now connect them to their neighbours
         for (int i = 0; i < newNodes.Length; i++) {
             // Get the NodeHandlers the current NodeHandler is connected to
-            List<System.Tuple<NodeHandler, int>> nodesConnectedTo = new List<System.Tuple<NodeHandler, int>>();
+            List<Tuple<NodeHandler, int>> nodesConnectedTo = new List<Tuple<NodeHandler, int>>();
             var ct = nodesToBeAdded[i].ConnectedTo;
 
             for (int k = 0; k < nodes.Count; k++)
                 for (int j = 0; j < ct.Count; j++)
                     if (ct[j].connectedTo.name == nodes[k].name)
-                        nodesConnectedTo.Add(new System.Tuple<NodeHandler, int>(nodes[k], ct[j].capacity));
+                        nodesConnectedTo.Add(Tuple.Create(nodes[k], ct[j].capacity));
 
+            try { 
             for (int k = 0; k < nodesConnectedTo.Count; k++)
                 ConnectTwoNodes(newNodes[i], nodesConnectedTo[k].Item1, nodesConnectedTo[k].Item2);
+            } catch (NullReferenceException e) {
+                Debug.LogError(e);
+            }
         }
 
         return newNodes;
@@ -717,10 +738,13 @@ public class GraphHandler : MonoBehaviour {
                     }
                 }
 
+                if (_nodes.Length > 200 && i == _nodes.Length / 2) yield return null;
+
                 // now we can attract to center
                 var directionCenter = centerPos - _nodes[i].node.Position;
                 _nodes[i].ApplyForce(directionCenter * (repulsion / 200f)); // make some times less influential than the coulomb force
             }
+            if (_nodes.Length >= 100) yield return null;
 
             // *** Apply Hookes's law ***
             for (int i = 0; i < _nodes.Length; i++) {
@@ -737,7 +761,10 @@ public class GraphHandler : MonoBehaviour {
                         _nodes[k].ApplyForce(direction * stiffness * displacement * -0.5f);
                     }
                 }
+
+                if (_nodes.Length > 200 && i == _nodes.Length / 2) yield return null;
             }
+            if (_nodes.Length >= 150) yield return null;
 
             // *** Update velocity and position ***
             // *** Calculate total energy ****
