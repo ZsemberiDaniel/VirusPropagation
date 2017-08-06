@@ -1,39 +1,80 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 public class SIRChart : MonoBehaviour {
 
-    private LineRenderer lineRenderer;
+    [SerializeField]
+    private Chart infectedChart;
+    [SerializeField]
+    private Chart recoveredChart;
+    [SerializeField]
+    private Chart normalChart;
 
-    int dataCount = 0;
-    int maxDataCount = 512;
+    // These are set in ResetChart
+    int dataCount;
+    int maxDataCount;
+
+    private Coroutine extendCoroutine;
+    private bool extendCoroutineRunning = false;
     
 	void Start() {
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.positionCount = 1;
-        lineRenderer.SetPosition(0, new Vector3(Camera.main.pixelWidth / 2f * 0.5f, Camera.main.pixelHeight / 2f * 0.5f));
-	}
+        ResetChart();
+    }
 
-    public void AddData(float infectedPercent) {
+    public void AddData(float infectedPercent, float recoveredPercent, float normalPercent) {
         dataCount++;
 
-        if (dataCount > maxDataCount) return;
-        lineRenderer.positionCount = dataCount + 1;
+        if (dataCount > maxDataCount) {
+            // if for some reason the coroutine is running then stop it
+            if (extendCoroutineRunning) {
+                StopCoroutine(extendCoroutine);
+                extendCoroutineRunning = false;
+            }
+            ExtendMaxDataCountImmediatly(maxDataCount + 20);
+            extendCoroutine = StartCoroutine(ExtendMaxDataCount(maxDataCount * 2, maxDataCount / 20));
+        }
 
-        lineRenderer.SetPosition(dataCount,
-            new Vector3(
-                Camera.main.pixelWidth / 2f * (0.5f + (dataCount * 0.5f / maxDataCount)),
-                Camera.main.pixelHeight / 2f * (0.5f + infectedPercent * 0.5f)
-            )
-        );
-
+        infectedChart.AddData(infectedPercent);
+        recoveredChart.AddData(recoveredPercent);
+        normalChart.AddData(normalPercent);
     }
 
     /// <summary>
-    /// Asserts that there is enough positions in the line renderer for one more.
-    /// If not it doubles the positions count.
+    /// Extends the data count immediatly to the given count
     /// </summary>
-    private void AssertPositionCount() {
-        if (dataCount >= lineRenderer.positionCount)
-            lineRenderer.positionCount *= 2;
+    private void ExtendMaxDataCountImmediatly(int count) {
+        maxDataCount = count;
+
+        infectedChart.SetMaxDataCount(maxDataCount);
+        recoveredChart.SetMaxDataCount(maxDataCount);
+        normalChart.SetMaxDataCount(maxDataCount);
+    }
+    /// <summary>
+    /// Extends maximum data count gradually
+    /// </summary>
+    /// <param name="count">To what count it should be extended</param>
+    /// <param name="step">In what steps it should be extended</param>
+    private IEnumerator ExtendMaxDataCount(int count, int step) {
+        extendCoroutineRunning = true;
+
+        while (maxDataCount < count) {
+            ExtendMaxDataCountImmediatly(maxDataCount + step);
+
+            yield return null;
+        }
+
+        extendCoroutineRunning = false;
+    }
+
+    /// <summary>
+    /// Resets this SIRChart's variables and linerenderers
+    /// </summary>
+    public void ResetChart() {
+        dataCount = 0;
+        maxDataCount = 32;
+
+        infectedChart.ResetChart(maxDataCount);
+        recoveredChart.ResetChart(maxDataCount);
+        normalChart.ResetChart(maxDataCount);
     }
 }

@@ -33,11 +33,12 @@ public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
         });
 
         // Capacity
-        capacityInput.onSubmit.AddListener(newCount => {
+        capacityInput.onValueChanged.AddListener(newCount => {
+            if (newCount.Length == 0) return;
             if (selectedConnection != null) {
                 try {
                     selectedConnection.Capacity = int.Parse(capacityInput.text);
-                } catch (System.ArgumentException e) {
+                } catch (ArgumentException e) {
                     // TODO wrong number
                 }
             }

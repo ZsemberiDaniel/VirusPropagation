@@ -48,7 +48,8 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
 
         #region Input fields
         // Name
-        nameTextInput.onSubmit.AddListener(newName => {
+        nameTextInput.onValueChanged.AddListener(newName => {
+            if (newName.Length == 0) return;
             if (currentNode != null) {
                 currentNode.name = newName;
             }
@@ -62,10 +63,17 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
 
 
         // Host count
-        hostCountInput.onSubmit.AddListener(newCount => {
+        hostCountInput.onValueChanged.AddListener(newCount => {
+            if (newCount.Length == 0) return;
             if (currentNode != null) {
                 try {
-                    currentNode.HostCount = int.Parse(newCount);
+                    int hostCount = int.Parse(newCount);
+                    if (hostCount < currentNode.InfectedCount) {
+                        // TODO wrong number
+                        return;
+                    }
+
+                    currentNode.HostCount = hostCount;
                 } catch (System.ArgumentException e) {
                     // TODO wrong number
                 }
@@ -80,10 +88,17 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
 
 
         // Infected count
-        infectedCountInput.onSubmit.AddListener(newCount => {
+        infectedCountInput.onValueChanged.AddListener(newCount => {
+            if (newCount.Length == 0) return;
             if (currentNode != null) {
                 try {
-                    currentNode.InfectedCount = int.Parse(newCount);
+                    int infectedCount = int.Parse(newCount);
+                    if (currentNode.HostCount < infectedCount) {
+                        // TODO wrong number
+                        return;
+                    }
+
+                    currentNode.InfectedCount = infectedCount;
                 } catch (System.ArgumentException e) {
                     // TODO wrong number
                 }

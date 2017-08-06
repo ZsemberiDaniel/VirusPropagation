@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
 using UnityEngine.Events;
+using DG.Tweening;
 
 [RequireComponent(typeof(LineRenderer))]
 public class GraphHandler : MonoBehaviour {
@@ -206,12 +207,14 @@ public class GraphHandler : MonoBehaviour {
                 // Select
                 } else if (gameState.gState == GameState.State.Editing) {
                     mousePanStartedAt = mouseWorldPos;
-                    if (aboveNodeIndex != -1) { 
-                        SelectedNode = aboveNodeIndex;
+                    if (aboveNodeIndex != -1) {
+                        // the ordering is important here
                         SelectedConnection = -1;
+                        SelectedNode = aboveNodeIndex;
                     } else if (aboveLineIndex != -1) {
-                        SelectedConnection = aboveLineIndex;
+                        // the ordering is important here
                         SelectedNode = -1;
+                        SelectedConnection = aboveLineIndex;
                     } else {
                         SelectedNode = -1;
                         SelectedConnection = -1;
@@ -229,10 +232,10 @@ public class GraphHandler : MonoBehaviour {
                 // The second part: we started the holding down on a node or we have not released the button yet
                 if (gameState.gState == GameState.State.Editing) {
                     // we are above a node when moving the mouse around so let that be the moving node
-                    if (aboveNodeIndex != -1 && whichNodeIsBeingMoved == -1) { 
+                    if (aboveNodeIndex != -1 && whichNodeIsBeingMoved == -1) {
+                        SelectedConnection = -1;
                         whichNodeIsBeingMoved = aboveNodeIndex;
                         SelectedNode = whichNodeIsBeingMoved;
-                        SelectedConnection = -1;
                     }
 
                     // We are moving a node
@@ -381,6 +384,7 @@ public class GraphHandler : MonoBehaviour {
 
         Destroy(nodes[index].gameObject);
         nodes.RemoveAt(index);
+        editPanel.SwitchTo(EditPanel.AttributePanelType.noneselected);
     }
 
     /// <summary>
@@ -446,6 +450,7 @@ public class GraphHandler : MonoBehaviour {
 
         Destroy(nodeConnections[index].gameObject);
         nodeConnections.RemoveAt(index);
+        editPanel.SwitchTo(EditPanel.AttributePanelType.noneselected);
     }
 
     /// <summary>
@@ -499,6 +504,7 @@ public class GraphHandler : MonoBehaviour {
             editPanel.NodeAttributePanel.UpdateNodeTo(nodes[SelectedNode]);
         } else {
             editPanel.NodeAttributePanel.UpdateToNoneSelected();
+            editPanel.SwitchTo(EditPanel.AttributePanelType.noneselected);
         }
     }
 
@@ -518,11 +524,13 @@ public class GraphHandler : MonoBehaviour {
             editPanel.ConnectionAttributePanel.UpdateToConnection(nodeConnections[SelectedConnection]);
         } else {
             editPanel.ConnectionAttributePanel.UpdateToConnectionNone();
+            editPanel.SwitchTo(EditPanel.AttributePanelType.noneselected);
         }
     }
 
     public void StartSimulation() {
         gameState.gState = GameState.State.Simulating;
+        chart.ResetChart();
         simulationCoroutine = StartCoroutine(StepVirus());
     }
     public void PauseSimulationToggle() {
@@ -540,7 +548,8 @@ public class GraphHandler : MonoBehaviour {
         StopCoroutine(simulationCoroutine);
     }
     private IEnumerator StepVirus() {
-        while (true) {
+        int infectCount = 1;
+        while (infectCount > 0) {
             while (simulationPaused) {
                 yield return null;
             }
@@ -582,14 +591,15 @@ public class GraphHandler : MonoBehaviour {
 
             // do all the math after the packets arrived
             StartCoroutine(ExecuteAfterSeconds(() => {
-                int infectCount = 0;
-                int hostCount = 0;
 
                 // infect
                 foreach (var key in infectCounts.Keys) {
                     key.Item2.Infect(infectCounts[key]);
                 }
 
+                infectCount = 0;
+                int recoveredCount = 0;
+                int hostCount = 0;
                 // recover the infected and patch the not infected
                 for (int i = 0; i < nodes.Count; i++) {
                     // recover infected
@@ -609,10 +619,11 @@ public class GraphHandler : MonoBehaviour {
                     }
 
                     hostCount += nodes[i].HostCount;
+                    recoveredCount += nodes[i].RecoveredCount;
                     infectCount += nodes[i].InfectedCount;
                 }
 
-                chart.AddData((float) infectCount / hostCount);
+                chart.AddData((float) infectCount / hostCount, (float) recoveredCount / hostCount, (float)(hostCount - recoveredCount - infectCount) / hostCount);
             }, travelTime));
 
             // Reset the bandwidth on the connections
@@ -636,6 +647,33 @@ public class GraphHandler : MonoBehaviour {
     public NodeHandler[] AddNodes(ParserNode[] nodesToBeAdded) {
         NodeHandler[] newNodes = new NodeHandler[nodesToBeAdded.Length];
 
+        Vector3 newAreaMiddle = new Vector3();
+
+        if (nodes.Count != 0) { 
+            // get the current rectangle of the nodes os we can place the new ones outside of it
+            Vector2 currentNodesLeft = new Vector2(int.MaxValue, int.MaxValue);
+            Vector2 currentNodesRight = new Vector2(int.MinValue, int.MinValue);
+            for (int i = 0; i < nodes.Count; i++) {
+                if (currentNodesLeft.x > nodes[i].Position.x) currentNodesLeft.x = nodes[i].Position.x;
+                if (currentNodesLeft.y > nodes[i].Position.y) currentNodesLeft.y = nodes[i].Position.y;
+                if (currentNodesRight.x < nodes[i].Position.x) currentNodesRight.x = nodes[i].Position.x;
+                if (currentNodesRight.y < nodes[i].Position.y) currentNodesRight.y = nodes[i].Position.y;
+            }
+            // how big the area for the new nodes should be
+            float areaSideLength = nodesToBeAdded.Length;
+        
+            newAreaMiddle = new Vector3(UnityEngine.Random.value, UnityEngine.Random.value).normalized // first get a random unit vector
+                // multiply it by the bigger side of the current node rectangle so we get a vector which is outside of the play area
+                * ((Mathf.Max(currentNodesRight.x - currentNodesLeft.x, currentNodesRight.y - currentNodesLeft.y) + areaSideLength)  // also add the areaSideLength so the new and the old node are doesn't collide
+                / 2f);
+
+            Vector3 camTo = new Vector3(newAreaMiddle.x, newAreaMiddle.y, Camera.main.transform.position.z);
+            Camera.main.transform.DOMove(camTo, 1f);
+        }
+
+        // the inital area of the added nodes should be smaller so they can spread out
+        float initialPositionSideLength = Mathf.Sqrt(nodesToBeAdded.Length);
+
         // add all the nodes
         for (int i = 0; i < nodesToBeAdded.Length; i++) {
             // if name is taken -> give another name
@@ -649,11 +687,10 @@ public class GraphHandler : MonoBehaviour {
             }
 
             // place it at a random pos
-            float areaMultiply = Mathf.Sqrt(nodesToBeAdded.Length);
-            Vector3 position = new Vector3(
-                UnityEngine.Random.Range(0f, areaMultiply * 2f) - areaMultiply,
-                UnityEngine.Random.Range(0f, areaMultiply * 2f) - areaMultiply
-                );
+            Vector3 position = newAreaMiddle + new Vector3(
+                UnityEngine.Random.value * initialPositionSideLength * 2f - initialPositionSideLength,
+                UnityEngine.Random.value * initialPositionSideLength * 2f - initialPositionSideLength
+            );
 
             // Add node
             newNodes[i] = AddNodeAtPos(position);
