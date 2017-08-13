@@ -2,7 +2,6 @@
 using UnityEngine.UI;
 using TMPro;
 using System;
-using UnityEngine.EventSystems;
 
 public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
 
@@ -17,12 +16,14 @@ public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
 
     [SerializeField]
     private TMP_InputField capacityInput;
+    private Image capacityImage;
 
     private GraphHandler graph;
     private NodeConnection selectedConnection;
 
 	void Start() {
         graph = FindObjectOfType<GraphHandler>();
+        capacityImage = capacityInput.GetComponent<Image>();
 
         UpdateToConnectionNone();
 
@@ -39,13 +40,19 @@ public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
                 try {
                     selectedConnection.Capacity = int.Parse(capacityInput.text);
                 } catch (ArgumentException e) {
-                    // TODO wrong number
+                    ErrorPanel.Instance.ShowError("This should never ever happen " + e.Message);
                 }
             }
         });
         // Set it to the before value so if it ha been changed invalidly it doesnt freak out
         capacityInput.onEndEdit.AddListener(newCount => {
             if (selectedConnection != null) {
+                // some error happened
+                if (capacityInput.text != selectedConnection.Capacity.ToString()) { 
+                    capacityImage.DisplayError();
+                    ErrorPanel.Instance.ShowError("This should never ever happen!");
+                }
+
                 capacityInput.text = selectedConnection.Capacity.ToString();
             }
         });
@@ -60,7 +67,6 @@ public class ConnectionAttributePanel : MonoBehaviour, AttributePanel {
         capacityInput.interactable = false;
         deleteButton.interactable = false;
     }
-
     public void UpdateToConnection(NodeConnection connection) {
         if (connection == null) return;
 

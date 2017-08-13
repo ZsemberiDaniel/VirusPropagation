@@ -30,6 +30,7 @@ public class GraphHandler : MonoBehaviour {
     private ConnectionDataParent connectionDataParent;
 
     private List<NodeHandler> nodes;
+    private List<SavedNode> savedNodes;
     private List<NodeConnection> nodeConnections;
 
 
@@ -44,6 +45,7 @@ public class GraphHandler : MonoBehaviour {
 
     private EditPanel editPanel;
 
+    [SerializeField]
     private SIRChart chart;
 
     // Selections
@@ -97,7 +99,6 @@ public class GraphHandler : MonoBehaviour {
         nodeNameParent = FindObjectOfType<NodeNameParent>();
         connectionDataParent = FindObjectOfType<ConnectionDataParent>();
         packetPooling = FindObjectOfType<PacketPooling>();
-        chart = FindObjectOfType<SIRChart>();
 
         nodeParent = new GameObject("NodeParent");
         nodeParent.transform.parent = transform;
@@ -107,6 +108,7 @@ public class GraphHandler : MonoBehaviour {
         connectStartLineRenderer = GetComponent<LineRenderer>();
 
         nodes = new List<NodeHandler>();
+        savedNodes = new List<SavedNode>();
         nodeConnections = new List<NodeConnection>();
         #endregion
 
@@ -348,6 +350,33 @@ public class GraphHandler : MonoBehaviour {
     }
 
     /// <summary>
+    /// Resets literally everything that the graphHandler controls
+    /// </summary>
+    public void ClearAll() {
+        chart.ResetChart();
+        chart.Hide();
+
+        ConnectStartNode = -1;
+        SelectedConnection = -1;
+        SelectedNode = -1;
+
+        for (int i = nodes.Count - 1; i >= 0; i--) {
+            nodeNameParent.QueueText(nodes[i].NodeNameHandler);
+            Destroy(nodes[i].gameObject);
+        }
+        nodes.Clear();
+
+        for (int i = nodeConnections.Count - 1; i >= 0; i--) {
+            connectionDataParent.QueueData(nodeConnections[i].ConnectionData);
+            Destroy(nodeConnections[i].gameObject);
+        }
+        nodeConnections.Clear();
+
+        if (gameState.gState == GameState.State.Editing)
+            editPanel.SwitchTo(EditPanel.AttributePanelType.noneselected);
+    }
+
+    /// <summary>
     /// Removes the node if it is present in the graph with the sure panel.
     /// </summary>
     public void RemoveNodeWithSurePanel(NodeHandler node) {
@@ -528,9 +557,37 @@ public class GraphHandler : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Saves the current state of the nodes to the savedNodes list
+    /// </summary>
+    private void SaveNodeStates() {
+        for (int i = 0; i < nodes.Count; i++) {
+            savedNodes.Add(new SavedNode(nodes[i].InfectedCount));
+        }
+    }
+
+    /// <summary>
+    /// Restores the savedNodes from the list
+    /// </summary>
+    public void RestoreNodeSave() {
+        if (savedNodes.Count == 0) return;
+
+        for (int i = 0; i < savedNodes.Count; i++) {
+            nodes[i].InfectedCount = savedNodes[i].infectedCount;
+            nodes[i].RecoveredCount = 0;
+        }
+
+        savedNodes.Clear();
+    }
+
     public void StartSimulation() {
+        SaveNodeStates();
+
         gameState.gState = GameState.State.Simulating;
+
+        chart.Show();
         chart.ResetChart();
+
         simulationCoroutine = StartCoroutine(StepVirus());
     }
     public void PauseSimulationToggle() {
@@ -544,6 +601,7 @@ public class GraphHandler : MonoBehaviour {
         simulationPaused = false;
     }
     public void StopSimulation() {
+        chart.Hide();
         gameState.gState = GameState.State.Adding;
         StopCoroutine(simulationCoroutine);
     }
@@ -572,7 +630,7 @@ public class GraphHandler : MonoBehaviour {
                             infectCounts[tuple] = count + 1;
                         } else { // infect someone else -> we need to check the connection bandwidth
                             // if packet can be sent
-                            if (infect.node.HasInfectable() && infect.connection.SendPacket(gameState.packetSize)) {
+                            if (infect.node.HasInfectable() && infect.connection.SendPacket(gameState.PacketSize)) {
                                 var tuple = Tuple.Create(nodes[i], infect.node);
                                 infectCounts.TryGetValue(tuple, out count);
                                 infectCounts[tuple] = count + 1;
@@ -865,6 +923,14 @@ public class GraphHandler : MonoBehaviour {
         
         public void ApplyForce(Vector3 force) {
             acceleration += force / mass;
+        }
+    }
+
+    private struct SavedNode {
+        public int infectedCount;
+
+        public SavedNode(int infectedCount) {
+            this.infectedCount = infectedCount;
         }
     }
 }

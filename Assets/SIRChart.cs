@@ -19,6 +19,7 @@ public class SIRChart : MonoBehaviour {
     
 	void Start() {
         ResetChart();
+        Hide();
     }
 
     public void AddData(float infectedPercent, float recoveredPercent, float normalPercent) {
@@ -76,5 +77,13 @@ public class SIRChart : MonoBehaviour {
         infectedChart.ResetChart(maxDataCount);
         recoveredChart.ResetChart(maxDataCount);
         normalChart.ResetChart(maxDataCount);
+    }
+
+    public void Show() {
+        gameObject.SetActive(true);
+    }
+
+    public void Hide() {
+        gameObject.SetActive(false);
     }
 }

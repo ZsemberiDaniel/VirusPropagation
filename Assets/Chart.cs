@@ -4,6 +4,8 @@
 [RequireComponent(typeof(RectTransform))]
 public class Chart : MonoBehaviour {
 
+    private const float ZPos = -1f;
+
     private LineRenderer lineRenderer;
     private RectTransform rectTransform;
 
@@ -12,12 +14,44 @@ public class Chart : MonoBehaviour {
         set { lineRenderer.positionCount = value; }
     }
     private int maxDataCount = 0;
+    private float[] percents = new float[0];
+    private float storedWidth, storedHeight;
     
-	void Start() {
+	void Awake() {
         lineRenderer = GetComponent<LineRenderer>();
         rectTransform = GetComponent<RectTransform>();
 
         ResetChart();
+    }
+
+    private void Start() {
+        storedWidth = rectTransform.rect.width;
+        storedHeight = rectTransform.rect.height;
+    }
+
+    private void Update() {
+        // resize change detection
+        if (rectTransform.rect.width != storedWidth || rectTransform.rect.height != storedHeight) {
+            OnResize();
+
+            storedWidth = rectTransform.rect.width;
+            storedHeight = rectTransform.rect.height;
+        }
+    }
+
+    /// <summary>
+    /// Called when chart was resized
+    /// </summary>
+    private void OnResize() {
+        for (int i = 0; i < lineRenderer.positionCount; i++) {
+            lineRenderer.SetPosition(i,
+                new Vector3(
+                    rectTransform.rect.width * ((float) i / maxDataCount),
+                    rectTransform.rect.height * (percents[i]),
+                    ZPos
+                )
+            );
+        }
     }
 
     /// <summary>
@@ -26,10 +60,12 @@ public class Chart : MonoBehaviour {
     public void AddData(float percent) {
         dataCount++;
 
+        percents[dataCount - 1] = percent; 
         lineRenderer.SetPosition(dataCount - 1,
             new Vector3(
                 rectTransform.rect.width * ((float) dataCount / maxDataCount),
-                rectTransform.rect.height * (percent)
+                rectTransform.rect.height * (percent),
+                ZPos
             )
         );
     }
@@ -38,6 +74,8 @@ public class Chart : MonoBehaviour {
     /// Sets at what data count the width of the chart should be 100%
     /// </summary>
     public void SetMaxDataCount(int count) {
+        System.Array.Resize(ref percents, count);
+
         for (int i = 1; i < lineRenderer.positionCount; i++) {
             Vector3 pos = lineRenderer.GetPosition(i);
             pos.x = rectTransform.rect.width * i / maxDataCount;
@@ -55,5 +93,6 @@ public class Chart : MonoBehaviour {
     public void ResetChart(int maxDataCount = 0) {
         this.maxDataCount = maxDataCount;
         dataCount = 0;
+        percents = new float[maxDataCount];
     }
 }

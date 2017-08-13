@@ -13,6 +13,7 @@ public class InputPanel : MonoBehaviour {
     private RectTransform dropdownButtonRectTranform;
     [SerializeField]
     private Button parseButton;
+    private Image parseButtonImage;
     [SerializeField]
     private TMP_InputField inputField;
     [SerializeField]
@@ -29,6 +30,7 @@ public class InputPanel : MonoBehaviour {
     
 	void Start() {
         rectTransform = GetComponent<RectTransform>();
+        parseButtonImage = parseButton.GetComponent<Image>();
         // resize and reposition
         rectTransform.sizeDelta = new Vector2(rectTransform.sizeDelta.x, Camera.main.pixelHeight * 0.8f);
         rectTransform.anchoredPosition = new Vector2(0, rectTransform.sizeDelta.y / 2f);
@@ -44,14 +46,18 @@ public class InputPanel : MonoBehaviour {
         parseButton.onClick.AddListener(() => {
             ParserNode[] nodes;
 
-            try { 
-                nodes = InputParser.Parse(inputField.text, 
-                    out graphHandler.GameState.S2I, 
-                    out graphHandler.GameState.I2R, 
-                    out graphHandler.GameState.S2R, 
-                    out graphHandler.GameState.packetSize);
+            try {
+                float s2i, i2r, s2r;
+                int packetSize;
+                nodes = InputParser.Parse(inputField.text, out s2i, out i2r, out s2r, out packetSize);
+
+                graphHandler.GameState.S2I = s2i;
+                graphHandler.GameState.S2R = i2r;
+                graphHandler.GameState.I2R = s2r;
+                graphHandler.GameState.PacketSize = packetSize;
             } catch (System.FormatException e) {
-                // TODO input not correct!!
+                ErrorPanel.Instance.ShowError(e.Message + "!");
+                parseButtonImage.DisplayError();
                 return;
             }
 
@@ -62,11 +68,14 @@ public class InputPanel : MonoBehaviour {
 
         // random button click listener
         randomButton.onClick.AddListener(() => {
-            ParserNode[] nodes = InputParser.Random(int.Parse(randomNodeInputField.text),
-                out graphHandler.GameState.S2I,
-                out graphHandler.GameState.I2R,
-                out graphHandler.GameState.S2R,
-                out graphHandler.GameState.packetSize);
+            float s2i, i2r, s2r;
+            int packetSize;
+            ParserNode[] nodes = InputParser.Random(int.Parse(randomNodeInputField.text), out s2i, out i2r, out s2r, out packetSize);
+
+            graphHandler.GameState.S2I = s2i;
+            graphHandler.GameState.S2R = i2r;
+            graphHandler.GameState.I2R = s2r;
+            graphHandler.GameState.PacketSize = packetSize;
 
             graphHandler.SeperateNodes(graphHandler.AddNodes(nodes));
             randomNodeInputField.text = "";

@@ -26,6 +26,8 @@ public class ConnectionDataParent : MonoBehaviour {
     }
 
     public void QueueData(ConnectionData data) {
+        if (data == null) return;
+
         data.gameObject.SetActive(false);
         this.data.Enqueue(data);
     }

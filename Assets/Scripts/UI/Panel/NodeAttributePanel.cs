@@ -11,6 +11,7 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
     /// </summary>
     [SerializeField]
     private TMP_InputField nameTextInput;
+    private Image nameImage;
 
     /// <summary>
     /// All the connected nodes are written here
@@ -23,12 +24,14 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
     /// </summary>
     [SerializeField]
     private TMP_InputField hostCountInput;
+    private Image hostCountImage;
 
     /// <summary>
     /// How many infected hosts there are in the current network
     /// </summary>
     [SerializeField]
     private TMP_InputField infectedCountInput;
+    private Image infectedCountImage;
 
     /// <summary>
     /// The node delete button
@@ -45,6 +48,9 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
 
     private void Start() {
         graph = FindObjectOfType<GraphHandler>();
+        nameImage = nameTextInput.GetComponent<Image>();
+        hostCountImage = hostCountInput.GetComponent<Image>();
+        infectedCountImage = infectedCountInput.GetComponent<Image>();
 
         #region Input fields
         // Name
@@ -57,6 +63,12 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
         // Set it to the name so if the wanted name had been taken the name stays
         nameTextInput.onEndEdit.AddListener(endText => {
             if (currentNode != null) {
+                // some error happened
+                if (nameTextInput.text != currentNode.name) {
+                    nameImage.DisplayError();
+                    ErrorPanel.Instance.ShowError(string.IsNullOrEmpty(endText) ? "Empty string!" : "Name taken!");
+                }
+
                 nameTextInput.text = currentNode.name;
             }
         });
@@ -69,19 +81,25 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
                 try {
                     int hostCount = int.Parse(newCount);
                     if (hostCount < currentNode.InfectedCount) {
-                        // TODO wrong number
+                        // error msg handled in onEndEdit
                         return;
                     }
 
                     currentNode.HostCount = hostCount;
-                } catch (System.ArgumentException e) {
-                    // TODO wrong number
+                } catch (ArgumentException e) {
+                    ErrorPanel.Instance.ShowError("This should never ever happen " + e.Message);
                 }
             }
         });
         // Set it to the before value so if it ha been changed invalidly it doesnt freak out
         hostCountInput.onEndEdit.AddListener(newCount => {
             if (currentNode != null) {
+                // some error happened
+                if (hostCountInput.text != currentNode.HostCount.ToString()) {
+                    ErrorPanel.Instance.ShowError("Host count cannot be lower than infected count!");
+                    hostCountImage.DisplayError();
+                }
+
                 hostCountInput.text = currentNode.HostCount.ToString();
             }
         });
@@ -94,19 +112,25 @@ public class NodeAttributePanel : MonoBehaviour, AttributePanel {
                 try {
                     int infectedCount = int.Parse(newCount);
                     if (currentNode.HostCount < infectedCount) {
-                        // TODO wrong number
+                        // error msg handled in onEndEdit
                         return;
                     }
 
                     currentNode.InfectedCount = infectedCount;
-                } catch (System.ArgumentException e) {
-                    // TODO wrong number
+                } catch (ArgumentException e) {
+                    ErrorPanel.Instance.ShowError("This should never ever happen " + e.Message);
                 }
             }
         });
         // Set it to the before value so if it ha been changed invalidly it doesnt freak out
         infectedCountInput.onEndEdit.AddListener(newCount => {
             if (currentNode != null) {
+                // some error happened
+                if (infectedCountInput.text != currentNode.InfectedCount.ToString()) {
+                    ErrorPanel.Instance.ShowError("Infected count cannot be lower than host count!");
+                    infectedCountImage.DisplayError();
+                }
+
                 infectedCountInput.text = currentNode.InfectedCount.ToString();
             }
         });

@@ -1,56 +1,121 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System;
 using UnityEngine;
 
 public static class InputParser {
-    
+
+#pragma warning disable CS0168 // Variable is declared but never used
     public static ParserNode[] Parse(string input, out float S2I, out float I2R, out float S2R, out int packetSize) {
-        string[] lines = input.Split(new string[] { "\r\n", "\n" }, System.StringSplitOptions.None);
+        string[] lines = input.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
 
         // Read node attributes
-        int count = int.Parse(lines[0]);
+        int count = -1;
+        try {
+            count = int.Parse(lines[0]);
+        } catch (ArgumentNullException e) {
+            throw new FormatException("Line 1 is empty");
+        } catch (FormatException e) {
+            throw new FormatException("Line 1 is not a number");
+        } catch (OverflowException e) {
+            throw new FormatException("Line 1 number is too big");
+        }
+
         ParserNode[] nodes = new ParserNode[count];
         Dictionary<string, int> indices = new Dictionary<string, int>();
         string[] data;
 
         for (int i = 0; i < count; i++) {
-            data = lines[i + 1].Split(' ');
+            try {
+                data = lines[i + 1].Split(' ');
+            } catch (IndexOutOfRangeException e) {
+                throw new FormatException("Too few lines. Need node description line at line " + (i + 1));
+            }
 
             // We already have one with this name
             if (indices.ContainsKey(data[0])) continue;
 
-            nodes[i] = new ParserNode(data[0], int.Parse(data[1]), int.Parse(data[2]));
-            
+            try { 
+                nodes[i] = new ParserNode(data[0], int.Parse(data[1]), int.Parse(data[2]));
+            } catch (ArgumentNullException e) {
+                throw new FormatException("Line " + (i + 2) + " has less numbers than needed or is empty");
+            } catch (FormatException e) {
+                throw new FormatException("Line " + (i + 2) + " has text where a number should be");
+            } catch (OverflowException e) {
+                throw new FormatException("Line " + (i + 2) + " has a too big number");
+            }
+
             indices.Add(nodes[i].name, i);
         }
 
         // Read connections
         int connectionCount = int.Parse(lines[count + 1]);
         for (int i = count + 2; i < count + connectionCount + 2; i++) {
-            data = lines[i].Split(' ');
+            try {
+                data = lines[i].Split(' ');
+            } catch (IndexOutOfRangeException e) {
+                throw new FormatException("Too few lines. Need node connection line at line " + i);
+            }
 
-            int firstIndex, secondIndex;
-            indices.TryGetValue(data[0], out firstIndex);
-            indices.TryGetValue(data[1], out secondIndex);
+            int firstIndex = -1, secondIndex = -1;
+            try {
+                if (indices.ContainsKey(data[0])) {
+                    firstIndex = indices[data[0]];
+                } else {
+                    throw new FormatException("Line " + (i + 1) + " has a reference to a non-existent node (" + data[0] + ")");
+                }
 
-            int capacity = int.Parse(data[2]);
+                if (indices.ContainsKey(data[1])) {
+                    firstIndex = indices[data[1]];
+                } else {
+                    throw new FormatException("Line " + (i + 1) + " has a reference to a non-existent node (" + data[1] + ")");
+                }
+            } catch (ArgumentNullException e) {
+                throw new FormatException("Line " + (i + 1) + " has less data than needed");
+            }
+
+            int capacity = -1;
+            try {
+                capacity = int.Parse(data[2]);
+            } catch (ArgumentNullException e) {
+                throw new FormatException("Line " + (i + 1) + " has no capacity defined");
+            } catch (FormatException e) {
+                throw new FormatException("Line " + (i + 1) + " has a non-number capacity");
+            } catch (OverflowException e) {
+                throw new FormatException("Line " + (i + 1) + " has a too big number as capacity");
+            }
             nodes[firstIndex].AddConnectedNode(nodes[secondIndex], capacity);
             nodes[secondIndex].AddConnectedNode(nodes[firstIndex], capacity);
         }
 
         // assign the static data
-        data = lines[lines.Length - 2].Split(' ');
-        S2I = float.Parse(data[0].Replace('.', ','));
-        I2R = float.Parse(data[1].Replace('.', ','));
-        S2R = float.Parse(data[2].Replace('.', ','));
+        try {
+            data = lines[lines.Length - 2].Split(' ');
+        } catch (IndexOutOfRangeException e) {
+            throw new FormatException("Too few lines. No virus attribute line (one before last one)");
+        }
+        try {
+            S2I = float.Parse(data[0].Replace('.', ','));
+            I2R = float.Parse(data[1].Replace('.', ','));
+            S2R = float.Parse(data[2].Replace('.', ','));
 
-        packetSize = int.Parse(lines[lines.Length - 1]);
+            packetSize = int.Parse(lines[lines.Length - 1]);
+        } catch (ArgumentNullException e) {
+            throw new FormatException("Last line has less numbers than needed");
+        } catch (FormatException e) {
+            throw new FormatException("Last line has a non-number");
+        } catch (OverflowException e) {
+            throw new FormatException("Last line has a too big number");
+        } catch (IndexOutOfRangeException e) {
+            throw new FormatException("Too few lines. No packet size line (last one)");
+        }
 
         return nodes;
     }
+#pragma warning restore CS0168 // Variable is declared but never used
 
-    public static ParserNode[] Random(int nodeCount, out float S2I, out float I2R, out float S2R, out int packetSize) {
+        public static ParserNode[] Random(int nodeCount, out float S2I, out float I2R, out float S2R, out int packetSize) {
         // init variables
         S2I = UnityEngine.Random.Range(0.01f, 0.09f);
         I2R = UnityEngine.Random.Range(0.001f, 0.01f);

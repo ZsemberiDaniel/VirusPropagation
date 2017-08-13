@@ -26,6 +26,8 @@ public class NodeNameParent : MonoBehaviour {
     }
 
     public void QueueText(NodeName text) {
+        if (text == null) return;
+
         text.gameObject.SetActive(false);
         texts.Enqueue(text);
     }
