@@ -1,0 +1,83 @@
+Initialize engine version: 2017.1.0f3 (472613c02cf7)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: NVIDIA GeForce GTX 860M (ID=0x1392)
+    Vendor:   NVIDIA
+    VRAM:     4065 MB
+    Driver:   22.21.13.8494
+Begin MonoManager ReloadAssembly
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\System.Core.dll (this message is harmless)
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\UnityEngine.Timeline.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DemiLib.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DOTween.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DOTween43.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DOTween46.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DOTween50.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\DOTweenPro.dll into Unity Child Domain
+Loading C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\TextMeshPro-1.0.55.2017.1.0b11.dll into Unity Child Domain
+Platform assembly: C:\Users\zsemberi.daniel\Documents\Unity\VirusPropagation\dist\Standalone\VirusPropagation_Data\Managed\System.dll (this message is harmless)
+- Completed reload, in  0.260 seconds
+<RI> Initializing input.
+<RI> Input initialized.
+<RI> Initialized touch support.
+UnloadTime: 3.104144 ms
+ArgumentException: Infected count cannot be higher than host count minus patched!
+  at NodeHandler.set_InfectedCount (System.Int32 value) [0x00025] in <c584321452614b40890a1af41ed67929>:0 
+  at GraphHandler.RestoreNodeSave () [0x00030] in <c584321452614b40890a1af41ed67929>:0 
+  at GraphResetButton.<Start>m__0 () [0x00000] in <c584321452614b40890a1af41ed67929>:0 
+  at UnityEngine.Events.InvokableCall.Invoke (System.Object[] args) [0x00011] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.InvokableCallList.Invoke (System.Object[] parameters) [0x00055] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.UnityEventBase.Invoke (System.Object[] parameters) [0x00007] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x00001] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.UI.Button.Press () [0x00027] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.UI.Button.OnPointerClick (UnityEngine.EventSystems.PointerEventData eventData) [0x00011] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.EventSystems.ExecuteEvents.Execute (UnityEngine.EventSystems.IPointerClickHandler handler, UnityEngine.EventSystems.BaseEventData eventData) [0x00008] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.EventSystems.ExecuteEvents.Execute[T] (UnityEngine.GameObject target, UnityEngine.EventSystems.BaseEventData eventData, UnityEngine.EventSystems.ExecuteEvents+EventFunction`1[T1] functor) [0x00070] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception)
+UnityEngine.EventSystems.ExecuteEvents:Execute(GameObject, BaseEventData, EventFunction`1)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMousePress(MouseButtonEventData)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMouseEvent(Int32)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMouseEvent()
+UnityEngine.EventSystems.StandaloneInputModule:Process()
+UnityEngine.EventSystems.EventSystem:Update()
+ 
+(Filename: <c584321452614b40890a1af41ed67929> Line: 0)
+
+ArgumentException: Infected count cannot be higher than host count minus patched!
+  at NodeHandler.set_InfectedCount (System.Int32 value) [0x00025] in <c584321452614b40890a1af41ed67929>:0 
+  at GraphHandler.RestoreNodeSave () [0x00030] in <c584321452614b40890a1af41ed67929>:0 
+  at GraphResetButton.<Start>m__0 () [0x00000] in <c584321452614b40890a1af41ed67929>:0 
+  at UnityEngine.Events.InvokableCall.Invoke (System.Object[] args) [0x00011] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.InvokableCallList.Invoke (System.Object[] parameters) [0x00055] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.UnityEventBase.Invoke (System.Object[] parameters) [0x00007] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x00001] in <9fdb371ef7fe481d8dece4e3922a49ea>:0 
+  at UnityEngine.UI.Button.Press () [0x00027] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.UI.Button.OnPointerClick (UnityEngine.EventSystems.PointerEventData eventData) [0x00011] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.EventSystems.ExecuteEvents.Execute (UnityEngine.EventSystems.IPointerClickHandler handler, UnityEngine.EventSystems.BaseEventData eventData) [0x00008] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+  at UnityEngine.EventSystems.ExecuteEvents.Execute[T] (UnityEngine.GameObject target, UnityEngine.EventSystems.BaseEventData eventData, UnityEngine.EventSystems.ExecuteEvents+EventFunction`1[T1] functor) [0x00070] in <81435e3d38c2450280d9a2a544eac7cd>:0 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception)
+UnityEngine.EventSystems.ExecuteEvents:Execute(GameObject, BaseEventData, EventFunction`1)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMousePress(MouseButtonEventData)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMouseEvent(Int32)
+UnityEngine.EventSystems.StandaloneInputModule:ProcessMouseEvent()
+UnityEngine.EventSystems.StandaloneInputModule:Process()
+UnityEngine.EventSystems.EventSystem:Update()
+ 
+(Filename: <c584321452614b40890a1af41ed67929> Line: 0)
+
+Setting up 4 worker threads for Enlighten.
+  Thread -> id: c4e4 -> priority: 1 
+  Thread -> id: bac8 -> priority: 1 
+  Thread -> id: 54c4 -> priority: 1 
+  Thread -> id: b208 -> priority: 1 
